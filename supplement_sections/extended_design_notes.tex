@@ -44,9 +44,7 @@ Telemetry-action mismatch is repaired by naming a legal control action for each 
 
 \subsection{Blueprint Contract Skeleton}
 
-The blueprint is a conceptual reference model, not a monolithic runtime. Its five layers are typed state catalog, observation and disturbance detection, boundary model and decision kernel, actuation interfaces, and safety and recovery envelope.
-
-The main paper includes the compact anti-pattern repair table. The appendix keeps the abstract policy skeleton and additional evidence anchors for readers who want the contract view in a more operational form.
+The worker, link scheduler and recovery coordinator must use the same reservation for a committed transfer. Table~\ref{tab:supp-policy-skeleton} gives the order of decisions.
 
 \begin{table*}[t]
 \small
@@ -58,10 +56,10 @@ Step & Policy skeleton \\
 \midrule
 1 & \texttt{observe\_signals()} and update telemetry confidence for contention, queueing, local freshness, exposure freshness, and retention pressure. \\
 2 & \texttt{identify\_state\_objects()} whose boundary is currently active: hot operator shards, KV pages, retrieval indexes, replay buffers, or demotion candidates. \\
-3 & \texttt{check\_hard\_constraints()} for SLA, memory limit, recovery envelope, shard-exposure safety, and quality floor before any optimization action. \\
-4 & \texttt{rank\_actions()} over admit, place, mutate, expose/transfer, compact, and evict/reclaim; domain-specific actions such as migrate, refresh, or demote are evaluated as specialized instances of those lifecycle stages using expected utility and maintenance debt. \\
-5 & \texttt{apply\_bounded\_action()} with explicit rollback or retry semantics when telemetry is delayed or conflicting. \\
-6 & \texttt{account\_outcome()} by charging the decision against tail latency, quality drift, effective budget loss, and long-horizon reuse value. \\
+3 & Before fencing writes, reserve CPU and bandwidth for live work and committed transfers. Check the destination, link, source and pause limit. Stale or conflicting measurements close admission. \\
+4 & Compare predicted waiting time with and without the handoff. Defer the move if retaining the current placement costs less or any headroom check fails. \\
+5 & Start at most one bounded batch. Rising queues or backpressure stop new batches. Preserve the reservation needed to finish a committed handoff and record its owner and input position. \\
+6 & Track the live queue and useful throughput. Restart slowly only after fresh readings stay below the lower congestion threshold for a recovery interval. Recheck headroom before each new batch. \\
 \bottomrule
 \end{tabular}
 \end{table*}

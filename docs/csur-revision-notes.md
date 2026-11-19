@@ -154,7 +154,7 @@ $$
 
 *作者补查：R1 问迁移能否避免放大热点，核对表 7 对稳定性的承诺。*
 
-[main.tex 第 696 行](../main.tex#L696)
+[main.tex 第 696 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L696)
 
 改前 · 英文
 
@@ -178,7 +178,7 @@ $$
 
 *作者补查：R1 问饱和保护，核对补充材料中的执行规则。*
 
-[extended_design_notes.tex 第 63 行](../supplement_sections/extended_design_notes.tex#L63)
+[extended_design_notes.tex 第 63 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/supplement_sections/extended_design_notes.tex#L63)
 
 改前 · 英文
 
@@ -202,7 +202,7 @@ $$
 
 *作者补查：R1 问何时允许迁移，核对案例图是否误导。*
 
-[running_examples_triptych.tex 第 26 行](../figures/running_examples_triptych.tex#L26)
+[running_examples_triptych.tex 第 26 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/figures/running_examples_triptych.tex#L26)
 
 改前 · 英文
 
@@ -244,7 +244,7 @@ $$
 
 ### 引言｜保留第 141 行的问题，说明第 143 行的困难
 
-*作者补查，归入 R2 的总体阅读意见。R2 没有点名引言。* [引言首段](../main.tex#L141) · [第二段](../main.tex#L143)
+*作者补查，归入 R2 的总体阅读意见。R2 没有点名引言。* [引言首段](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L141) · [第二段](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L143)
 
 **第 1 段的末句保留。**
 
@@ -272,7 +272,7 @@ $$
 
 ### §1 首句｜历史背景（原文对照）
 
-*作者补查 · 原文对照*　[main.tex 第 141 行](../main.tex#L141)
+*作者补查 · 原文对照*　[main.tex 第 141 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L141)
 
 > Systems have **moved away from largely stateless throughput engines** toward long-running services shaped by evolving state.
 
@@ -292,7 +292,7 @@ $$
 
 ### §3.4 末段｜把案例的结果交给 §4
 
-*R2 点名 §3、§4；第 525 行是作者补查的衔接段。* [§3.4 末段](../main.tex#L525)
+*R2 点名 §3、§4；第 525 行是作者补查的衔接段。* [§3.4 末段](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L525)
 
 改前 · 英文
 
@@ -336,7 +336,7 @@ $$
 
 ### §4.2.1｜流处理要从哪个时刻接着算？
 
-送审原句节选，见 [main.tex 第 569 行](../main.tex#L569)。
+送审原句节选，见 [main.tex 第 569 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L569)。
 
 改前 · 英文
 
@@ -360,7 +360,7 @@ $$
 
 ### §4.2.2｜一个查询来不及算完，能少算一些数据吗？
 
-送审原句节选，见 [main.tex 第 575 行](../main.tex#L575)。
+送审原句节选，见 [main.tex 第 575 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L575)。
 
 改前 · 英文
 
@@ -386,7 +386,7 @@ $$
 
 ### §4.2.3｜前缀命中后，请求发到哪里，缺的块要不要搬？
 
-送审原句节选，见 [main.tex 第 591 行](../main.tex#L591)。
+送审原句节选，见 [main.tex 第 591 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L591)。
 
 改前 · 英文
 
@@ -414,7 +414,7 @@ $$
 
 ### §4.2.4｜新向量来了，查询要等磁盘索引重建吗？
 
-送审原句节选，见 [main.tex 第 597 行](../main.tex#L597)。
+送审原句节选，见 [main.tex 第 597 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L597)。
 
 改前 · 英文
 
@@ -438,7 +438,7 @@ $$
 
 ### §4.2.5｜留下的旧样本，什么时候用来训练？
 
-送审原句节选，见 [main.tex 第 603 行](../main.tex#L603)。
+送审原句节选，见 [main.tex 第 603 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L603)。
 
 改前 · 英文
 
@@ -464,7 +464,7 @@ $$
 
 *作者补查：R2 问 §3 如何支撑 §4，检查案例结论能否从条件推出。*
 
-[main.tex 第 510 行](../main.tex#L510)
+[main.tex 第 510 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L510)
 
 改前 · 英文
 
@@ -486,7 +486,7 @@ $$
 
 ### §5.1.2｜控制器放在哪里，并不直接决定一致性
 
-*作者补查 · 原文对照*　[main.tex 第 672 行](../main.tex#L672)
+*作者补查 · 原文对照*　[main.tex 第 672 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L672)
 
 > Embedded control is fast but fragmented, sidecar-style control is modular but delayed, and **shared services are consistent** but can bottleneck if their APIs are too fine-grained
 
@@ -496,7 +496,7 @@ $$
 
 ### §7｜让结论回答引言的问题
 
-*作者补查 · 原文对照*　[main.tex 第 779 行](../main.tex#L779)
+*作者补查 · 原文对照*　[main.tex 第 779 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L779)
 
 > Progress will therefore depend on runtimes that keep **state identity, observability, and policy precedence stable under disturbance**.
 
@@ -562,7 +562,7 @@ $$
 
 ### §2.1｜纳入标准怎样用在边界论文上
 
-*作者补查 · 原文对照*　[main.tex 第 188 行](../main.tex#L188)
+*作者补查 · 原文对照*　[main.tex 第 188 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L188)
 
 > Recent papers enter the analytical core only when they expose **a new state object, runtime control seam, or evaluation boundary**.
 
@@ -678,7 +678,7 @@ $$
 
 *作者补查：R2 点名比较表，核对表头与正文是否一致。*
 
-[main.tex 第 611 行](../main.tex#L611)
+[main.tex 第 611 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L611)
 
 改前 · 英文
 
@@ -704,7 +704,7 @@ $$
 
 *作者补查，归入 R2 对表 5、6 的意见。*
 
-[main.tex 第 657 行](../main.tex#L657)
+[main.tex 第 657 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L657)
 
 改前 · 英文
 
@@ -728,7 +728,7 @@ $$
 
 ### §6.1｜用评价回答具体论断
 
-*作者补查 · 原文对照*　[main.tex 第 737 行](../main.tex#L737)
+*作者补查 · 原文对照*　[main.tex 第 737 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L737)
 
 > Systems that score well on only one dimension deliver **local improvements rather than full state-management solutions**.
 
@@ -792,7 +792,7 @@ $$
 
 *作者补查：R2 质疑 §3.4 的案例，向前核对同一个案例中的动作。*
 
-[§3.3.4 的总结句](../main.tex#L510)；对照 §3.2.2 第 458 行、§3.2.4 第 474 行和 §3.4 第 517–519 行。
+[§3.3.4 的总结句](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L510)；对照 §3.2.2 第 458 行、§3.2.4 第 474 行和 §3.4 第 517–519 行。
 
 改前 · 英文
 
@@ -1079,7 +1079,7 @@ $$
 
 ### §3.2.3｜把两篇论文的贡献写成同一件事
 
-*作者补查 · 原文对照*　[main.tex 第 466 行](../main.tex#L466)
+*作者补查 · 原文对照*　[main.tex 第 466 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/main.tex#L466)
 
 > vLLM and Sarathi-Serve then make memory layout and phase asymmetry explicit by **treating KV memory as a paged state object whose footprint evolves differently in prefill and decode**.
 
@@ -1105,7 +1105,7 @@ $$
 
 ### 附录 A.4｜用相邻工作划清边界
 
-*作者补查 · 原文对照*　[extended_landscape.tex 第 35 行](../supplement_sections/extended_landscape.tex#L35)
+*作者补查 · 原文对照*　[extended_landscape.tex 第 35 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/supplement_sections/extended_landscape.tex#L35)
 
 > Together, these adjacent lines help motivate **contract-oriented blueprint and middleware pressure-point arguments** rather than one more domain-specific taxonomy.
 
@@ -1117,7 +1117,7 @@ $$
 
 *作者补查：R3 明确提到附录 C，核对案例能否补足正文。*
 
-[extended_case_studies.tex 第 37 行](../supplement_sections/extended_case_studies.tex#L37)
+[extended_case_studies.tex 第 37 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/supplement_sections/extended_case_studies.tex#L37)
 
 改前 · 英文
 
@@ -1195,7 +1195,7 @@ $$
 
 ### 附录 D.3｜记忆的价值未必随时间缓慢下降
 
-*作者补查 · 原文对照*　[extended_domain_notes.tex 第 65 行](../supplement_sections/extended_domain_notes.tex#L65)
+*作者补查 · 原文对照*　[extended_domain_notes.tex 第 65 行](https://github.com/DataSysResearch/parallel-distributed-state-management-survey/blob/cca9f5a4c6f023335156723a8bc33a38aba1a080/supplement_sections/extended_domain_notes.tex#L65)
 
 > whose **value decays gradually** and whose maintenance debt is easy to hide if the runtime only reports steady-state quality
 
