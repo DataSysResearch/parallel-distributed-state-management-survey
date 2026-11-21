@@ -1,58 +1,26 @@
 \section{Cross-Domain Case Walkthroughs}
 
-The three cases follow a request, an ownership change and an index update beyond the first local action.
-
-\subsection{Multi-Tenant LLM Serving Under Burst Arrival}
-
-In Table~\ref{tab:session-timeline}, session A has finished a request and a new request B needs its pages. Compare admitting B immediately with keeping A's prefix until more pages become available. Use the same arrivals in both runs and follow A through its next visit.
+Table~\ref{tab:case-walkthroughs} turns the three running examples into disturbance tests. In each row, start from the same arrivals and state, vary the named decision, and follow both the immediate beneficiaries and the work exposed to its cost.
 
 \begin{table}[H]
 \small
 \centering
-\setlength{\tabcolsep}{3pt}
-\caption{A returning session under a fixed KV memory budget.}
-\label{tab:session-timeline}
-\begin{tabular}{@{}p{0.17\textwidth}p{0.36\textwidth}p{0.41\textwidth}@{}}
+\setlength{\tabcolsep}{4pt}
+\caption{Events and measurements for the three running examples.}
+\label{tab:case-walkthroughs}
+\begin{tabular}{@{}p{0.16\textwidth}p{0.38\textwidth}p{0.40\textwidth}@{}}
 \toprule
-When & State and action & Observable consequence \\
+Case & Event sequence and comparison & Observable consequences \\
 \midrule
-A finishes & The worker keeps an unpinned prefix. & A later request can reuse it while the model, adapter and prefix match. \\
-B arrives & B needs more KV pages than are free. The allocator admits B and reclaims the pages holding A's prefix. & B starts earlier. Record the pages freed and its time to first token. \\
-A returns & Fetch a surviving copy or, if none remains, run prefill again. & Record the reload or recomputation time and A's time to first token. Compare both requests with a run where B waited. \\
+Serving &
+A leaves a valid, unpinned KV prefix. When B needs pages, reclaim the prefix or make B wait. Revisit A with the original input, model, and adapter~\cite{kwon2023pagedattention,hu2024memserve,liu2025lmcache}. &
+Record pages freed and B's first-token delay. Record A's first-token delay and whether its prefix was loaded or rebuilt. \\
+Shard handoff &
+Move independently assignable keys. Inject failure after copying but before the ownership commit, then repeat just after the commit~\cite{carbone2015flink,nasir2019megaphone,mao2025spacker}. &
+Check the authoritative epoch and last committed input position. Track duplicate or missed updates, write pause, peak and end-of-burst backlog, and recovery time. \\
+Index update &
+Delete a document while queries arrive. Compare repair schedules under the same update trace and enforce each query's minimum visible version~\cite{singh2021freshdiskann,xu2023spfresh,wang2026candor}. &
+Track visibility lag, recall, and latency during maintenance. Report how often a query waits or is redirected because its local replica has an older version. \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Stateful Stream Processing Under Reconfiguration}
-
-\paragraph{State object.}
-The runtime governs keyed windows, operator shards, progress metadata, checkpoint boundaries, replay buffers, and migration ownership metadata.
-
-\paragraph{Control surface.}
-The active controls are migration grain, trigger policy, checkpoint cadence, replay scheduling, and ownership-transfer timing~\cite{akidau2013millwheel,carbone2015flink,nasir2019megaphone,zhao2024recovery,mao2025spacker}.
-
-\paragraph{Coupling path.}
-Consider a failure after the copy but before the recorded ownership change. Recovery must identify the last committed owner and input position. After the change commits, retries must honor the new owner and must not apply an event twice.
-
-\paragraph{Evaluation boundary.}
-The right boundary combines pause time, throughput stability, correctness, and post-failure recovery behavior. Measuring migration and recovery separately hides the control loop that actually governs the state object.
-
-\paragraph{Remaining gap.}
-The missing piece is a disturbance-invariant ownership protocol that unifies visibility, transfer legality, and replay semantics across scale-out and recovery rather than re-deriving them per subsystem.
-
-\subsection{Retrieval Memory Under Continuous Corpus Drift}
-
-\paragraph{State object.}
-The relevant objects are mutable ANN shards, segment-sealing metadata, shard-exposure state, planner-visible freshness signals, and long-horizon graph or hierarchy memory.
-
-\paragraph{Control surface.}
-The runtime controls incremental indexing, local repair, compaction, rebuild trigger, publication, stale-memory eviction, and planner-mediated retrieval invocation~\cite{singh2021freshdiskann,wang2021milvus,guo2022manu,asai2024selfrag,zhang2026flowrag,wang2026candor}.
-
-\paragraph{Coupling path.}
-Suppose a deletion has reached one replica but another still serves the previous version. A query requiring the deletion must use a replica that has published it or wait for publication. Replaying the same queries during repair reveals whether removing a replica shifts load to its neighbors.
-
-\paragraph{Evaluation boundary.}
-The relevant boundary is answer quality under drift plus freshness lag, query latency, maintenance cost, and exposure safety.
-
-\paragraph{Remaining gap.}
-Record the interval from a deletion to its visibility alongside recall and latency for queries issued during that interval.

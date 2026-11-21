@@ -88,7 +88,7 @@ SuperNeurons and related memory-reuse systems show that activation liveness, rec
 
 \subsection{Blueprint and Fault-Model Boundary Conditions}
 
-The first piece that should remain visible here is the distinction between \emph{typed state objects}, \emph{observation contracts}, \emph{decision precedence}, \emph{actuation scope}, and \emph{safety-envelope invariants}. The blueprint is not a proposal for one monolithic runtime; its role is to make recurring hidden assumptions explicit enough that neighboring mechanisms can compose without silently violating one another's boundaries.
+When mechanisms share state, each needs to declare the object it acts on, what it can observe, when its decision takes precedence, and what it may change. The recovery rules must preserve the invariants that other mechanisms rely on.
 
 One implication is that recovery should not be treated as a separate semantic regime. If steady-state control reasons over typed KV pages, refreshable vector shards, replay buffers, or demotable retention objects, then recovery must restore and validate the same objects under the same exposure and action boundaries. Otherwise a system effectively runs one state model in steady state and another during failure. That inconsistency matters because it explains why fault-model notes are part of the mechanism, not optional decoration.
 
