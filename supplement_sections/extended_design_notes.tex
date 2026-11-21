@@ -1,10 +1,10 @@
 \section{Design Checklist and Contract Skeleton}
 
-This appendix material keeps the design-space, anti-pattern, blueprint, and boundary evidence behind the design conclusions. The organization follows recurring principles, architecture axes, contract repairs, and concrete examples.
+The checklist and migration protocol spell out what a runtime must record, reserve, and recover.
 
 \subsection{Design Checklist}
 
-The checklist turns the comparative synthesis into concrete design questions. The table names recurring questions, and the following subsections unpack them into principles, axes, and repair patterns.
+For each decision, identify the state object, the evidence needed to act, and the service property it must preserve.
 
 \begin{table}[H]
 \small
@@ -25,15 +25,15 @@ Recovery reuses the same state objects as steady state & Which invariants surviv
 
 \subsection{Contract Principles}
 
-Observation before optimization means the relevant state boundary must already be named in telemetry. State as a first-class scheduling object means runtimes should schedule around mutable state rather than passive tasks. Closed-loop rather than open-loop policies means action must feed back into accounting. Stable gains require boundary modeling means every gain must declare what is held fixed, what debt is deferred, and what disturbance invalidates the claim.
+Record the state identity, observation time, and action allowed by that observation. After acting, update the record with the result and any work still pending. A later controller can then distinguish observed load from load already reserved by another action.
 
 \subsection{Architecture Axes}
 
-The architecture axes are state granularity, control-plane coupling, lifecycle management, and service-boundary alignment. Granularity ranges from record to session. Control logic may be embedded, sidecar-based, or shared. Lifecycle management should make admit, place, mutate, expose or transfer, compact, and evict or reclaim explicit. Boundary alignment asks whether local wins survive end-to-end service constraints.
+Choose a granularity that matches the legal unit of change. Place authorization where controllers can observe or reserve the relevant resources. For an object spanning workers, an embedded controller may need a shared reservation even when its own scheduling is local.
 
 \subsection{Anti-Pattern Repairs}
 
-Telemetry-action mismatch is repaired by naming a legal control action for each signal. Policy Layering Without Conflict Semantics is repaired by ordering hard constraints, soft objectives, and tie-breakers. One-shot benchmarking is repaired by adding warmup, disturbance, adaptation, and re-stabilization. Ignoring Write Amplification in Read-Optimized Designs is repaired by charging mutation and repair debt to the same service boundary as read gains. Treating State Ownership as Static is repaired by transferable ownership and lease semantics.
+For a read path that defers maintenance, measure both query performance and pending updates. For a moving shard, inject failures on either side of authority commit and verify that replay starts at the committed position.
 
 \begin{figure*}[t]
 \centering
@@ -56,17 +56,17 @@ Step & Policy skeleton \\
 \midrule
 1 & \texttt{observe\_signals()} and update telemetry confidence for contention, queueing, local freshness, exposure freshness, and retention pressure. \\
 2 & \texttt{identify\_state\_objects()} whose boundary is currently active: hot operator shards, KV pages, retrieval indexes, replay buffers, or demotion candidates. \\
-3 & Before fencing writes, check fresh resource readings, both foreground queues and downstream backpressure. Defer if a queue is growing, backpressure reaches the stop threshold, or peak transfer demand exceeds headroom after reservations. \\
-4 & Compare the total waiting time at both workers with and without the move. Admit a batch only if it is expected to reduce waiting and its write pause stays within the service limit. \\
-5 & Reserve capacity before starting one bounded batch. Stop issuing batches if queues grow or backpressure reaches the stop threshold. Preserve the reservations and input positions needed to finish committed handoffs. \\
-6 & Restart slowly after queues have stopped growing and backpressure has stayed below the lower restart threshold for a recovery interval. Recheck all reservations before the next batch. \\
+3 & Check fresh foreground demand and backpressure at both endpoints and along the path. Defer if a bound is unavailable, pressure reaches the stop threshold, or the candidate exceeds headroom after reservations. \\
+4 & Compare cumulative waiting with the reference placement. Require a write pause within the service limit and enough time remaining after settlement for the move to repay its cost. \\
+5 & Reserve capacity before fencing. Stop issuing batches when foreground pressure rises beyond its bound. Keep the resources and progress records required to complete or abort a committed move. \\
+6 & Restart at a low rate after queues drain and backpressure remains below the lower restart threshold for a recovery interval. Revalidate reservations before the next batch. \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
 \subsection{Boundary Case Bridges}
 
-These case bridges highlight three recurring boundary failures. Multi-tenant LLM serving under burst arrival shows how admit, expose/transfer, evict/reclaim, and restoration debt share one p99-facing boundary. Stateful stream reconfiguration shows that migration, progress, and replay need one transfer protocol. Retrieval under corpus drift shows that freshness, rebuild debt, and exposure legality must be co-governed.
+Appendix~C instantiates the checklist with a serving revisit, a shard handoff, and index maintenance. The three tests end when the affected request, replay, or query can be observed.
 
 \subsection{Hardware-Conscious Evidence Anchors}
 

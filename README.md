@@ -1,6 +1,6 @@
 # Beyond Storage: State as a Runtime Control Problem in Parallel and Distributed Systems
 
-This repository contains the ACM Computing Surveys manuscript "Beyond Storage: State as a Runtime Control Problem in Parallel and Distributed Systems" and its separate supplement. The revision builds to 22 pages for each PDF using the vendored ACM template. The revision history and links to the reviewer-response work are recorded in [the integration notes](docs/csur-revision-integration.md).
+This repository contains the ACM Computing Surveys manuscript "Beyond Storage: State as a Runtime Control Problem in Parallel and Distributed Systems" and its separate supplement. The revision builds to 19 pages for the manuscript and 20 for the supplement using the vendored ACM template. The revision history and links to the reviewer-response work are recorded in [the integration notes](docs/csur-revision-integration.md).
 
 For collaboration and agent-specific writing rules, see `AGENTS.md`.
 
