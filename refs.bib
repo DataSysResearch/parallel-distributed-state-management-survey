@@ -9,7 +9,7 @@
   publisher = {Springer Science and Business Media LLC},
   author = {Luo,  Chen and Carey,  Michael J.},
   year = {2019},
-  month = July,
+  month = jul,
   pages = {393–418}
 }
 
@@ -34,7 +34,7 @@
   publisher = {Springer Science and Business Media LLC},
   author = {Zhang,  Shuhao and Soto,  Juan and Markl,  Volker},
   year = {2023},
-  month = Sept,
+  month = sep,
   pages = {451–479}
 }
 
@@ -771,11 +771,12 @@
 }
 
 @article{carbone2015flink,
-  title={Apache flink: Stream and batch processing in a single engine},
+  title={{Apache Flink}: Stream and batch processing in a single engine},
   author={Carbone, Paris and Katsifodimos, Asterios and Ewen, Stephan and Markl, Volker and Haridi, Seif and Tzoumas, Kostas},
   journal={The Bulletin of the Technical Committee on Data Engineering},
   volume={38},
   number={4},
+  pages={28--38},
   year={2015},
   publisher={Institute of Electrical and Electronics Engineers (IEEE)}
 }
@@ -834,7 +835,7 @@
 }
 
 @article{nasir2019megaphone,
-  author = {Hoffmann, Moritz and Lattuada, Andrea and McSherry, Frank},
+  author = {Hoffmann, Moritz and Lattuada, Andrea and McSherry, Frank and Kalavri, Vasiliki and Liagouris, John and Roscoe, Timothy},
   title = {Megaphone: latency-conscious state migration for distributed streaming dataflows},
   year = {2019},
   issue_date = {May 2019},
@@ -1425,7 +1426,7 @@
   publisher = {IEEE},
   author = {Rebuffi,  Sylvestre-Alvise and Kolesnikov,  Alexander and Sperl,  Georg and Lampert,  Christoph H.},
   year = {2017},
-  month = July,
+  month = jul,
   pages = {5533–5542}
 }
 
@@ -1454,6 +1455,7 @@
   booktitle = {Advances in Neural Information Processing Systems},
   editor = {H. Wallach and H. Larochelle and A. Beygelzimer and F. d\textquotesingle Alch\'{e}-Buc and E. Fox and R. Garnett},
   pages = {},
+  address = {Red Hook, NY, USA},
   publisher = {Curran Associates, Inc.},
   title = {Online Continual Learning with Maximal Interfered Retrieval},
   url = {https://proceedings.neurips.cc/paper_files/paper/2019/file/15825aee15eb335cc13f9b559f166ee8-Paper.pdf},
@@ -1861,10 +1863,10 @@ keywords = {MapReduce, approximation, extreme value theory, multi-stage sampling
   doi={10.1109/TPAMI.2018.2889473}
 }
 
-@article{singh2021freshdiskann,
+@misc{singh2021freshdiskann,
   author  = {Aditi Singh and Suhas Jayaram Subramanya and Ravishankar Krishnaswamy and Harsha Vardhan Simhadri},
   title   = {FreshDiskANN: A Fast and Accurate Graph-Based ANN Index for Streaming Similarity Search},
-  journal = {arXiv preprint arXiv:2105.09613},
+  howpublished = {arXiv:2105.09613},
   year    = {2021},
   doi     = {10.48550/arXiv.2105.09613},
   url     = {https://arxiv.org/abs/2105.09613}
@@ -3432,16 +3434,18 @@ keywords = {MapReduce, approximation, extreme value theory, multi-stage sampling
 @article{qin2025mooncake,
   author = {Qin, Ruoyu and Li, Zheming and He, Weiran and Cui, Jialei and Tang, Heyi and Ren, Feng and Ma, Teng and Cai, Shangming and Zhang, Yineng and Zhang, Mingxing and Wu, Yongwei and Zheng, Weimin and Xu, Xinran},
   title = {Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving},
-  year = {2025},
+  year = {2026},
   publisher = {Association for Computing Machinery},
   address = {New York, NY, USA},
   issn = {1553-3077},
   url = {https://doi.org/10.1145/3773772},
   doi = {10.1145/3773772},
   abstract = {Mooncake is the serving platform for Kimi, an LLM chatbot service developed by Moonshot AI. This platform features a KVCache-centric disaggregated architecture that not only separates prefill and decoding clusters but also efficiently utilizes the underexploited CPU, DRAM, SSD and NIC resources of the GPU cluster to establish a disaggregated KVCache. At the core of Mooncake is its KVCache-centric global cache and a scheduler designed to maximize throughput while adhering to stringent latency-related Service Level Objectives (SLOs). Our experiments demonstrate that Mooncake excels in scenarios involving long-context inputs. In tests using real traces, Mooncake increases the effective request capacity by 59\% ∼ 498\% when compared to baseline methods, all while complying with SLOs. Currently, Mooncake is operational across thousands of nodes, processing over 100 billion tokens daily. In practical deployments, Mooncake’s innovative architecture enables Kimi to handle 115\% and 107\% more requests on NVIDIA A800 and H800 clusters, respectively, compared to previous systems.},
-  note = {Just Accepted},
+  volume = {22},
+  number = {4},
+  pages = {1--38},
   journal = {ACM Trans. Storage},
-  month = nov,
+  month = aug,
   keywords = {Machine learning system, LLM serving, KVCache}
 }
 
@@ -4287,4 +4291,24 @@ author = {Gao, Xin and Acharya, Sibasish and Han, Sihui and Ren, Yongxiong and Z
   pages={132102},
   year={2026},
   publisher={Springer}
+}
+
+@misc{hu2024memserve,
+  author = {Cunchen Hu and Heyang Huang and Junhao Hu and Jiang Xu and
+            Xusheng Chen and Tao Xie and Chenxi Wang and Sa Wang and
+            Yungang Bao and Ninghui Sun and Yizhou Shan},
+  title = {{MemServe}: Flexible Mem Pool for Building Disaggregated {LLM} Serving with Caching},
+  year = {2024},
+  howpublished = {arXiv:2406.17565v3},
+  url = {https://arxiv.org/abs/2406.17565v3}
+}
+
+@misc{liu2025lmcache,
+  author = {Yuhan Liu and Jiayi Yao and Yihua Cheng and Yuwei An and
+            Xiaokun Chen and Shaoting Feng and Yuyang Huang and Samuel Shen and
+            Rui Zhang and Kuntai Du and Junchen Jiang},
+  title = {{LMCache}: An Efficient {KV} Cache Layer for Enterprise-Scale {LLM} Inference},
+  year = {2025},
+  howpublished = {arXiv:2510.09665v2},
+  url = {https://arxiv.org/abs/2510.09665v2}
 }

@@ -1,23 +1,27 @@
 \section{Cross-Domain Case Walkthroughs}
 
-These walkthroughs preserve the same five-field structure while making the deployment-shaped reasoning more concrete.
+The three cases follow a request, an ownership change and an index update beyond the first local action.
 
 \subsection{Multi-Tenant LLM Serving Under Burst Arrival}
 
-\paragraph{State object.}
-The governed objects are paged KV state, prefix-sharing metadata, tenant-specific adapters, model-residency windows, and the restoration debt inherited by subsequent requests.
+In Table~\ref{tab:session-timeline}, session A has finished a request and a new request B needs its pages. Compare admitting B immediately with keeping A's prefix until more pages become available. Use the same arrivals in both runs and follow A through its next visit.
 
-\paragraph{Control surface.}
-The runtime controls admission, batch shaping, paging, prefill/decode separation, expose/transfer decisions, evict/reclaim decisions, and tenant-sensitive placement~\cite{kwon2023pagedattention,agrawal2024sarathi,zhong2024distserve,patel2024splitwise,chen2024punica,nian2026cacheflow}.
-
-\paragraph{Coupling path.}
-A locally beneficial admission may force evict/reclaim decisions that destroy future reuse, causing later re-materialization traffic and queue amplification. Once phase disaggregation is enabled, the next bottleneck may shift from raw memory capacity to expose/transfer ordering and the downstream cost of restoring discarded state.
-
-\paragraph{Evaluation boundary.}
-The meaningful boundary is TTFT, TPOT, p99 latency, and goodput over a multi-phase window rather than isolated allocator efficiency.
-
-\paragraph{Remaining gap.}
-The unresolved problem is still a unified contract that ranks admit, expose/transfer, evict/reclaim, offload, tenant isolation, and restoration debt against the same service boundary instead of letting each sub-policy optimize its own phase locally.
+\begin{table}[H]
+\small
+\centering
+\setlength{\tabcolsep}{3pt}
+\caption{A returning session under a fixed KV memory budget.}
+\label{tab:session-timeline}
+\begin{tabular}{@{}p{0.17\textwidth}p{0.36\textwidth}p{0.41\textwidth}@{}}
+\toprule
+When & State and action & Observable consequence \\
+\midrule
+A finishes & The worker keeps an unpinned prefix. & A later request can reuse it while the model, adapter and prefix match. \\
+B arrives & B needs more KV pages than are free. The allocator admits B and reclaims the pages holding A's prefix. & B starts earlier. Record the pages freed and its time to first token. \\
+A returns & Fetch a surviving copy or, if none remains, run prefill again. & Record the reload or recomputation time and A's time to first token. Compare both requests with a run where B waited. \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Stateful Stream Processing Under Reconfiguration}
 
@@ -28,7 +32,7 @@ The runtime governs keyed windows, operator shards, progress metadata, checkpoin
 The active controls are migration grain, trigger policy, checkpoint cadence, replay scheduling, and ownership-transfer timing~\cite{akidau2013millwheel,carbone2015flink,nasir2019megaphone,zhao2024recovery,mao2025spacker}.
 
 \paragraph{Coupling path.}
-Reconfiguration changes locality and dual-ownership windows; recovery policy changes replay pressure and convergence cost. These effects feed back into future contention and scheduling stability rather than remaining isolated maintenance events.
+Consider a failure after the copy but before the recorded ownership change. Recovery must identify the last committed owner and input position. After the change commits, retries must honor the new owner and must not apply an event twice.
 
 \paragraph{Evaluation boundary.}
 The right boundary combines pause time, throughput stability, correctness, and post-failure recovery behavior. Measuring migration and recovery separately hides the control loop that actually governs the state object.
@@ -45,10 +49,10 @@ The relevant objects are mutable ANN shards, segment-sealing metadata, shard-exp
 The runtime controls incremental indexing, local repair, compaction, rebuild trigger, publication, stale-memory eviction, and planner-mediated retrieval invocation~\cite{singh2021freshdiskann,wang2021milvus,guo2022manu,asai2024selfrag,zhang2026flowrag,wang2026candor}.
 
 \paragraph{Coupling path.}
-Aggressive refresh improves freshness in the short term but can increase maintenance debt, publication lag, and answer instability if exposure, rebuild, and planner behavior are not coordinated.
+Suppose a deletion has reached one replica but another still serves the previous version. A query requiring the deletion must use a replica that has published it or wait for publication. Replaying the same queries during repair reveals whether removing a replica shifts load to its neighbors.
 
 \paragraph{Evaluation boundary.}
 The relevant boundary is answer quality under drift plus freshness lag, query latency, maintenance cost, and exposure safety.
 
 \paragraph{Remaining gap.}
-The missing abstraction is an exposure-aware accounting layer that can combine recall drift, rebuild debt, planner confidence, and publication legality into one explicit trigger policy.
+Record the interval from a deletion to its visibility alongside recall and latency for queries issued during that interval.

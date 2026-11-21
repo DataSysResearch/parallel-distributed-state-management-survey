@@ -16,8 +16,6 @@ Spanner clarifies leaseholder continuity and writer legitimacy across distribute
 
 \subsection{Serving, Retrieval, and Memory-Governance Systems in Broader Perspective}
 
-The main text intentionally centers the serving literature on short-lived lifecycle control. A broader perspective shows why this concentration happened.
-
 Earlier serving systems such as Clipper, Clockwork, Nexus, InferLine, and INFaaS primarily exposed orchestration, provisioning, predictability, and admission as control surfaces around model invocation~\cite{crankshaw2017clipper,gujarati2020clockwork,shen2019nexus,crankshaw2020inferline,romero2021infaas}. Later LLM-oriented systems internalized more of the memory substrate itself: vLLM and related paging systems govern KV state directly; Sarathi, DistServe, Splitwise, and FastGen govern phase asymmetry; Punica, S-LoRA, Jenga, and Prism govern tenant multiplexing, adapter residency, heterogeneous cache layouts, and whole-model activation windows~\cite{kwon2023pagedattention,agrawal2024sarathi,zhong2024distserve,patel2024splitwise,holmes2024fastgen,chen2024punica,sheng2023slora,zhang2025jenga,yu2025prism}. This trajectory is exactly why the survey reads serving as a state-governance problem rather than as a mere systems-for-LLMs topic.
 
 Retrieval and memory-governance systems underwent a parallel shift. Dense retrieval and late-interaction systems such as DPR and ColBERT originally foregrounded query-time quality versus cost over mostly offline-built memory substrates~\cite{karpukhin2020dpr,khattab2020colbert}.

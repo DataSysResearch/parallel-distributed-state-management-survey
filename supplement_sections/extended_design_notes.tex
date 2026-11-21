@@ -44,9 +44,7 @@ Telemetry-action mismatch is repaired by naming a legal control action for each 
 
 \subsection{Blueprint Contract Skeleton}
 
-The blueprint is a conceptual reference model, not a monolithic runtime. Its five layers are typed state catalog, observation and disturbance detection, boundary model and decision kernel, actuation interfaces, and safety and recovery envelope.
-
-The main paper includes the compact anti-pattern repair table. The appendix keeps the abstract policy skeleton and additional evidence anchors for readers who want the contract view in a more operational form.
+The worker, link scheduler and recovery coordinator must use the same reservation for a committed transfer. Table~\ref{tab:supp-policy-skeleton} gives the order of decisions.
 
 \begin{table*}[t]
 \small
@@ -58,10 +56,10 @@ Step & Policy skeleton \\
 \midrule
 1 & \texttt{observe\_signals()} and update telemetry confidence for contention, queueing, local freshness, exposure freshness, and retention pressure. \\
 2 & \texttt{identify\_state\_objects()} whose boundary is currently active: hot operator shards, KV pages, retrieval indexes, replay buffers, or demotion candidates. \\
-3 & \texttt{check\_hard\_constraints()} for SLA, memory limit, recovery envelope, shard-exposure safety, and quality floor before any optimization action. \\
-4 & \texttt{rank\_actions()} over admit, place, mutate, expose/transfer, compact, and evict/reclaim; domain-specific actions such as migrate, refresh, or demote are evaluated as specialized instances of those lifecycle stages using expected utility and maintenance debt. \\
-5 & \texttt{apply\_bounded\_action()} with explicit rollback or retry semantics when telemetry is delayed or conflicting. \\
-6 & \texttt{account\_outcome()} by charging the decision against tail latency, quality drift, effective budget loss, and long-horizon reuse value. \\
+3 & Before fencing writes, check fresh resource readings, both foreground queues and downstream backpressure. Defer if a queue is growing, backpressure reaches the stop threshold, or peak transfer demand exceeds headroom after reservations. \\
+4 & Compare the total waiting time at both workers with and without the move. Admit a batch only if it is expected to reduce waiting and its write pause stays within the service limit. \\
+5 & Reserve capacity before starting one bounded batch. Stop issuing batches if queues grow or backpressure reaches the stop threshold. Preserve the reservations and input positions needed to finish committed handoffs. \\
+6 & Restart slowly after queues have stopped growing and backpressure has stayed below the lower restart threshold for a recovery interval. Recheck all reservations before the next batch. \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -72,7 +70,7 @@ These case bridges highlight three recurring boundary failures. Multi-tenant LLM
 
 \subsection{Hardware-Conscious Evidence Anchors}
 
-The hardware-conscious cluster is most useful when read through three debts that the main paper could only summarize briefly. The first is \emph{representation debt}: approximate execution and compressed-state systems such as Anda, TurboAttention, QServe, ATOM, VAttention, FlashInfer, SampleAttention, QuantLLM, and related low-bit cache work all show that encoding decisions reshape memory traffic, kernel regularity, and quality loss simultaneously~\cite{fang2025anda,kang2025turboattention,lin2025qserve,zhao2024atom,prabhu2025vattention,ye2025flashinfer,zhu2024sampleattention,xia2024quantllm,dong2024qhitter}. Even systems that make representation look cheaper, such as FuseMax-style lines, do so by shifting complexity into calibration, selection, or error accounting rather than eliminating it~\cite{nayak2024fusemax,kwon2020fvm,jha2025hycache}.
+Three costs arise when state moves across hardware. The first comes from its representation: approximate execution and compressed-state systems such as Anda, TurboAttention, QServe, ATOM, VAttention, FlashInfer, SampleAttention, QuantLLM, and related low-bit cache work all show that encoding decisions reshape memory traffic, kernel regularity, and quality loss simultaneously~\cite{fang2025anda,kang2025turboattention,lin2025qserve,zhao2024atom,prabhu2025vattention,ye2025flashinfer,zhu2024sampleattention,xia2024quantllm,dong2024qhitter}. Even systems that make representation look cheaper, such as FuseMax-style lines, do so by shifting complexity into calibration, selection, or error accounting rather than eliminating it~\cite{nayak2024fusemax,kwon2020fvm,jha2025hycache}.
 
 The second is \emph{movement debt}. Systems such as Chimera, HeterInfer, LIA, HETIS, Mercury, WaferLLM, DRAMCache, Tiertune, MoE-lightweight offloading, PhoenixOS, JIT-Serve, MLP offload, Colloid, BeyondHotness, Optimus, Tigon, and MemStrata all show that placement helps only when the runtime can jointly price compute skew, cache residency, interconnect bandwidth, and cross-device movement~\cite{huang2025chimera,chen2025heteroinfer,kim2025lia,mo2025hetis,mercury2025rms,he2025waferllm,hong2024dramcache,lee2025tiertune,cao2025moelightning,wei2025phoenixos,zhang2026jitserve,maurya2025mlpoffload,vuppalapati2024colloid,liu2025beyondhotness,feng2025optimus,huang2025tigon,zhong2024memstrata}. Storage- and I/O-adjacent systems such as AutoScratch, PFSCK, PolarDB, CXL-based designs, Toleo, and VM-control make the same point from another boundary: once state crosses devices or tiers, metadata handling, legality, and transport cost become first-order control variables rather than implementation details~\cite{fu2024autoscratch,domingo2021pfsck,cao2020polardb,ji2025cxl,dong2024toleo,zheng2024vmcu,tabatabai2024fbmm}.
 

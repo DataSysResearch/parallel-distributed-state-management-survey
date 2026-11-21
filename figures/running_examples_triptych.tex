@@ -23,14 +23,14 @@
 \node[rowlab] at (-2.15,1.05) {A};
 \node[cell, fill=blue!4] (a1) at (0,1.05) {streaming fraud\\hot keys};
 \node[cell, fill=blue!4] (a2) at (3.65,1.05) {campaign burst\\flips popularity};
-\node[cell, fill=blue!4] (a3) at (7.30,1.05) {repartition hotspots\\adjust snapshots};
-\node[cell, fill=blue!4] (a4) at (10.95,1.05) {tail latency recovers\\replay debt bounded};
+\node[cell, fill=blue!4] (a3) at (7.30,1.05) {compare waits; check\\headroom; defer or\\move one batch};
+\node[cell, fill=blue!4] (a4) at (10.95,1.05) {queue and delay\\through recovery};
 
 \node[rowlab] at (-2.15,-0.25) {B};
 \node[cell, fill=green!4] (b1) at (0,-0.25) {LLM assistant\\KV pages, adapters};
 \node[cell, fill=green!4] (b2) at (3.65,-0.25) {long prompts create\\memory pressure};
-\node[cell, fill=green!4] (b3) at (7.30,-0.25) {phase-aware admit\\selective transfer};
-\node[cell, fill=green!4] (b4) at (10.95,-0.25) {TTFT stabilizes\\goodput survives};
+\node[cell, fill=green!4] (b3) at (7.30,-0.25) {admit B; reclaim\\cached prefix};
+\node[cell, fill=green!4] (b4) at (10.95,-0.25) {B starts sooner;\\A may repeat prefill};
 
 \node[rowlab] at (-2.15,-1.55) {C};
 \node[cell, fill=purple!4] (c1) at (0,-1.55) {RAG knowledge\\index, refresh queue};
