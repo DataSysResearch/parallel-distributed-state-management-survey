@@ -1,6 +1,6 @@
 # Beyond Storage: State as a Runtime Control Problem in Parallel and Distributed Systems
 
-This repository contains an ACM Computing Surveys submission package centered on the survey "Beyond Storage: State as a Runtime Control Problem in Parallel and Distributed Systems". The project is organized as a 35-page main manuscript plus a separate supplement under the same analytical frame.
+This repository contains the ACM Computing Surveys manuscript "Beyond Storage: State as a Runtime Control Problem in Parallel and Distributed Systems" and its separate supplement. The revision builds to 22 pages for each PDF using the vendored ACM template. The revision history and links to the reviewer-response work are recorded in [the integration notes](docs/csur-revision-integration.md).
 
 For collaboration and agent-specific writing rules, see `AGENTS.md`.
 
@@ -30,7 +30,9 @@ make pdf
 ### Authorless Version
 
 `authorless-version/main_authorless.tex` is the authorless, combined manuscript
-used for similarity checking. It retains the appendix inputs and uses one
+used for similarity checking at the original submission stage. Its main text is
+a snapshot, and the current revision uses the root-level main manuscript and
+supplement. The authorless build retains the appendix inputs and uses one
 bibliography. Build it from its own directory so that its relative references
 to the shared repository assets resolve correctly:
 
@@ -72,3 +74,9 @@ The submission target is ACM `acmart` with `\documentclass[manuscript]{acmart}`.
 ## Status
 
 The current package preserves the root-level manuscript structure, uses a vendored ACM template source, and keeps the main paper and supplement as separate submission artifacts for low-diff collaboration and review.
+
+## Licensing
+
+This is a manuscript collaboration repository. The authors have chosen to keep the manuscript sources and original figures under their existing copyright terms, with no additional repository-wide reuse license during peer review.
+
+Third-party materials retain their own terms. The vendored [ACM template](third_party/acmart-src/LICENSE) includes the LaTeX Project Public License 1.3c, and the bundled [GitHub CLI](bin/LICENSE) includes its MIT license. Consult the original sources for the terms of any externally sourced figures or examples.
