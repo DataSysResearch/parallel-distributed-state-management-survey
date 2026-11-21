@@ -125,7 +125,7 @@
 \email{hjin@hust.edu.cn}
 
 \begin{abstract}
-Shared state increasingly shapes both performance and failure behavior in streaming, serving, retrieval, and continual-learning systems. Existing studies, however, often isolate access control, hardware-aware execution, memory management, and long-horizon updates. The review organizes this literature around three coupled dimensions: state access and scheduling, state-aware execution, and state evolution and reuse. Across these dimensions, the literature is synthesized through a common scaffold: state object, control surface, coupling path, evaluation boundary, and unresolved contract. This comparison identifies recurring anti-patterns and informs a contract-oriented blueprint and disturbance-aware evaluation agenda. Taken together, the evidence characterizes state management as a runtime control problem.
+Shared state shapes performance and failure in streaming, LLM serving, retrieval, and continual learning. Studies often evaluate a state decision at the point where it acts, even though its costs can appear in later requests or at another worker. We organize this literature around three coupled dimensions of runtime control: access and scheduling, state-aware execution, and evolution and reuse. We compare what state each mechanism governs, which actions it permits, where their effects appear, and which claims the measurements support. The comparisons motivate a runtime blueprint that makes these responsibilities explicit, including a saturation-aware migration contract and an evaluation agenda that follows systems through disturbances and recovery.
 \end{abstract}
 
 \ccsdesc[500]{Computer systems organization~Distributed architectures}
@@ -157,7 +157,7 @@ Figure~\ref{fig:propagation} summarizes this organizing perspective.
 \textbf{Access, execution, and evolution form one control loop over long-lived state.} A paper advances state management when it makes a decision in that loop observable, analyzable, or enforceable.
 \end{keybox}
 
-The survey makes four contributions. It first introduces a vocabulary for comparing streaming, approximate execution, serving, retrieval, and memory-centric intelligent services. It then develops a three-axis taxonomy around access, execution, and evolution, identifies recurring anti-patterns together with a contract-oriented blueprint for stateful runtimes, and proposes disturbance-aware evaluation boundaries for mechanisms whose local gains may not survive composition. The emphasis is comparative rather than exhaustive.
+The survey develops a vocabulary and taxonomy for comparing state decisions across these domains. It derives recurring failure modes and a contract-oriented blueprint, including conditions for deferring or pausing migration under saturation. It then proposes evaluations that test whether the gain from a local action survives its effect on subsequent requests and other workers.
 
 Section~\ref{sec:foundations} defines the survey scope and analytical model. Section~\ref{sec:core-dimensions} develops the three dimensions of state management. Section~\ref{sec:comparative-synthesis} compares mechanisms across domains and identifies when they transfer beyond one workload family. Section~\ref{sec:design-implications} distills design principles, anti-patterns, and a contract-oriented blueprint. Section~\ref{sec:evaluation-outlook} gives an evaluation vocabulary and research agenda, and Section~\ref{sec:conclusion} concludes.
 
@@ -184,53 +184,19 @@ We use three inclusion criteria:
 
 \subsection{Survey Protocol and Evidence Posture}
 
-We trace citations backward to the systems that introduced a mechanism and forward to later systems that use or modify it. We use published versions where available. We include a recent paper in the comparison when it introduces a state object, a runtime decision, or a service outcome that changes the comparison.
-
-We select papers that let us distinguish competing explanations. For example, paging and prefix reuse both reduce memory pressure in serving. Paging changes how much space a request occupies, whereas a reusable prefix can spare a later request an entire prefill.
-
-For borderline cases, consider compaction. A description of the disk layout provides background. A paper that lets the scheduler defer compaction while queries are waiting exposes a decision whose effects on both writes and reads we can examine.
-
-We distinguish papers that introduce a mechanism, papers that test it under new conditions, and papers that propose a use still to be evaluated. For instance, a system may demonstrate a shorter pause when it moves a shard. Whether foreground traffic recovers sooner is a separate empirical question.
-
-When a study measures retrieval accuracy on a static index, its result tells us little about the interval between a deletion and its visibility to queries. Table~\ref{tab:representative-mechanism-matrix} places a consequence to examine beside each reported mechanism.
+We trace citations backward to mechanisms' origins and forward to systems that reuse or change them. We favor published versions when available and select representative studies to expose differences in state, runtime decisions, and measured outcomes. The Supplement's literature landscape records the wider coverage. The paper compares representative mechanisms under their stated conditions. For instance, a shorter migration pause establishes a property of the handoff, while foreground recovery requires measuring the queue after a burst.
 
 \subsection{Positioning Relative to Existing Surveys}
 
-Several prior surveys already cover important slices of this design space, including catalogs of stream-processing design choices~\cite{hirzel2014catalog,cugola2012processing}, transactional stream processing~\cite{zhang2024survey}, hardware-conscious stream processing~\cite{zhang2020hardware}, and continual learning~\cite{delange2021survey}. These are valuable adjacent references, but they adopt narrower units of analysis than the present manuscript. Our comparison unit is not one application class or one execution substrate; it is the runtime control problem exposed over state. That choice lets us place migration, checkpointing, KV-cache lifecycle control, vector-index maintenance, retrieval freshness governance, and retention budgeting into the same analytical frame without flattening them into a chronology of subfields.
-
-We ask which systems abstractions recur once state becomes the primary object of runtime control across streaming, serving, retrieval, and long-horizon memory services. Adjacent storage-engine and cache-management surveys provide boundary cases: they expose controls such as compaction, admission, eviction, and placement~\cite{luo2020lsm,ali2011survey}, but usually assume stabler object models and clearer invalidation semantics.
+Prior surveys describe stream processing, transactional and hardware-conscious execution, and continual learning~\cite{hirzel2014catalog,cugola2012processing,zhang2024survey,zhang2020hardware,delange2021survey}. Our unit of comparison is a runtime decision over state. This lets us compare, for example, when a stream worker can move a shard with when an inference worker can reclaim a reusable prefix. Storage and cache surveys supply adjacent mechanisms such as compaction and eviction~\cite{luo2020lsm,ali2011survey}. We use them where those decisions affect later execution or recovery.
 
 \subsection{Broader Literature Landscape}
 
-Several systems lines expose the same runtime seams under different names. Together they motivate the three-axis decomposition used in this survey: access and scheduling, execution optimization, and evolution and reuse.
-
-\subsubsection{Stream and Dataflow Systems}
-
-Stream and dataflow systems provide the historical root for the access-and-scheduling axis. Aurora and Borealis made operator state and adaptation explicit inside continuous-query plans, while later systems showed that progress tracking, incremental maintenance, elasticity, and recovery all reshape the same state boundary rather than living in isolated subsystems~\cite{abadi2003aurora,abadi2005borealis,carbone2015flink,carbone2015asynchronous,chandramouli2014trill,armbrust2018structured,murray2013differential,gulisano2012streamcloud}. Performance and correctness depend on when state is exposed, who owns it, and how safely it can move under disturbance.
-
-\subsubsection{Transactional, Replicated, and Memory-Resident Systems}
-
-Transactional, replicated, and memory-resident data systems supply the correctness boundary that the rest of the survey reuses. Systems such as H-Store, Spanner, Calvin, RAMCloud, and FaRM treat state as a jointly governed object spanning consistency, placement, logging, and remote access~\cite{kallman2008hstore,corbett2012spanner,thomson2012calvin,ousterhout2011ramcloud,dragojevic2014farm}; snapshot and replication results clarify which transitions may be migrated, replayed, or shared without violating service guarantees~\cite{chandy1985snapshot,ongaro2014raft}. This lineage explains why later mechanisms such as ownership transfer, shard exposure, and short-lived memory reuse must be evaluated against explicit authority and replay boundaries, not only against throughput.
-
-\subsubsection{Serving and Memory-Governance Systems}
-
-Serving and memory-governance systems motivate the execution-optimization axis. Clipper and Clockwork already treated caching, batching, predictability, and dispatch as runtime controls~\cite{crankshaw2017clipper,gujarati2020clockwork}; modern LLM-serving systems make the state objects explicit through KV pages, adapter state, model residency, and prefill/decode separation~\cite{kwon2023pagedattention,sheng2023slora,zheng2023sglang,agrawal2024sarathi,zhong2024distserve,patel2024splitwise,yu2025prism,zhang2025jenga}. Tiered and disaggregated memory systems reach the same abstraction from another direction: extra capacity helps only when the runtime decides which state must stay near compute and which movement or maintenance debt can be deferred safely~\cite{hu2024aceso,zhong2024unimem,jalalian2024extmem,raybuck2021hemem,cho2024coaxial,zhao2025equilibria,peng2024scalacache,wang2025finemem,chang2024gmt,li2024streamcache,qiu2025hotrap}. Stable execution gains require governed placement, representation, and movement, not faster kernels alone.
-
-\subsubsection{Retrieval, Retention, and Approximation Systems}
-
-Retrieval, long-horizon memory, continual retention, and approximation-aware systems motivate the evolution-and-reuse axis. Retrieval systems show that reusable memory is valuable only when refresh, lookup, and maintenance remain coordinated~\cite{guu2020realm,lewis2020rag,borgeaud2022retro,izacard2022atlas,asai2024selfrag,wang2024hipporag,sarthi2024raptor}. Continual-learning and bounded-retention systems expose the same problem under update pressure, where memory budgets, replay choices, and future reuse value must be co-governed~\cite{kirkpatrick2017ewc,lopez2017gem,rebuffi2017icarl,chaudhry2019agem,rolnick2019experience,aljundi2019mir,buzzega2020der,hayes2020remind,prabhu2020gdumb,delange2021survey}. Approximate analytics adds a complementary constraint: once summaries or samples stand in for full state, the runtime must reason jointly about error, update cost, and future reuse~\cite{agarwal2013blinkdb,goiri2015approxhadoop,wang2018approxjoin,hu2018streamapprox,chen2018incapprox}. Together these lines make state a lifecycle control problem: retention, compression, and refresh choices change future freshness, utility, and service stability.
-
-\subsubsection{Adjacent Traditions and Analytical Boundary}
-
-Several adjacent traditions fix the analytical boundary. General-purpose dataflow and storage systems show how large services externalize state into programmable, replicated layers with explicit update semantics~\cite{isard2007dryad,chambers2010flumejava,murray2011ciel,chang2008bigtable,decandia2007dynamo,lakshman2010cassandra,baker2011megastore,peng2010percolator}. CRDT-style replicated objects, dynamic graph systems, vector indexes, and low-level attention kernels add further boundary cases: merge legality, mutable structure, index maintenance, and memory-traffic shape become runtime-visible once the state object persists long enough to constrain later control~\cite{shapiro2011crdt,gao2026grace,karpukhin2020dpr,khattab2020colbert,jegou2011pq,malkov2020hnsw,dao2024flashattention2}. These cases ground the comparison in recurring runtime control problems rather than unrelated applications.
-
+Stream and transactional systems motivate authority and recovery boundaries. Serving and tiered-memory systems expose the costs of placement and transfer. Dynamic indexes and online learning show how state maintenance changes future service. The Supplement documents the wider literature behind these three parts of the taxonomy.
 
 \subsection{System Model: Where State Lives in a Runtime}
 
-The literature landscape motivates a common runtime abstraction: before comparing mechanisms, we need to specify where state lives and when it becomes manageable. Prior work on stream processing provides a methodological template~\cite{fernandez2010seep,fernandez2013osm,mao2025spacker,carbone2015flink}: first describe computation, communication, deployment, and execution boundaries, then define which internal objects must be exposed as managed state. The modeling style is general: state becomes meaningful only after the runtime boundary around computation, communication, scheduling, and recovery has been made explicit.
-
-We call an object state when it persists beyond one operation and its contents or location affect later work. A KV page qualifies because later decoding steps can read the keys and values it holds. The scheduler can place, move or reclaim these objects. Table~\ref{tab:state-system-model} lists the workers that use them and the paths over which they move.
-
+An object qualifies as managed state when it survives one operation, affects later work, and is subject to a runtime decision. A KV page qualifies because a later decoding step can read it and the allocator can place, move, or reclaim it. Table~\ref{tab:state-system-model} shows where state lives and how it moves in representative runtimes.
 
 \begin{table}[!htbp]
 \centering
@@ -293,7 +259,7 @@ Two requests can read the same cached prefix. If a worker reclaims its last copy
 
 Consider a request that needs state held by another worker. Its placement determines how far the data must travel. Copying that data uses bandwidth that other requests may already need. If the destination keeps a valid copy, a later request may avoid the trip. These are the access, execution, and reuse effects depicted in Figure~\ref{fig:propagation}. The same dependencies arise in operator placement, approximate execution, and online retention~\cite{zhang2019briskstream,zeng2024pecj,zhou2025ferret}.
 
-Suppose a worker processes requests in arrival order, one at a time. A new request arrives behind $q$ requests, each with $s$ milliseconds of service remaining. Let $t$ be the time from starting the new request to producing its first token. Then time to first token is $qs+t$. With two requests ahead at 5~ms each, the queue adds 10~ms. At the same queue length, losing a cached prefix adds a further 4~ms if the request spends 4~ms recomputing it before decoding. These times illustrate the calculation. Continuous batching changes the calculation because several requests can share a decoding step.
+Suppose a worker serves requests in arrival order, one at a time. A new request arrives behind $q$ requests, each with $s$ milliseconds of service remaining. If its own first-token work takes $t$, then its time to first token (TTFT) is $qs+t$. Two preceding requests at 5~ms each add 10~ms. The finite response $\Delta\mathrm{TTFT}/\Delta q$ is then 5~ms per additional queued request. At fixed $q$, a cache miss adds 4~ms if recomputing the prefix takes 4~ms. For an empirical estimate, use paired replays and hold the other factors fixed. Continuous batching changes service overlap, so the queue response depends on the operating point.
 
 \begin{keybox}
 \textbf{Local state decisions do not stay local.} Access contention, execution placement, and update policy propagate through the state lifecycle and reappear as constraints on the other two axes, so each mechanism must be read together with the downstream boundary it may quietly reshape.
@@ -373,13 +339,13 @@ Earlier stream systems exposed the same lesson at different boundaries. Aurora a
 
 In Example~A, the candidate move assigns some of the busy accounts to a second worker. Estimate waiting time under both placements for the same incoming events, including those already served by the destination. After the move, each worker has a different arrival rate. Its processing rate may change as well: BriskStream models how placing communicating operators on different sockets changes execution time on a shared-memory machine~\cite{zhang2019briskstream}. Between workers there is also a one-time cost before the new placement can take effect.
 
-For the accounts under consideration, estimate the delay caused by the handoff. While writes to those accounts are fenced, their events must wait. Taking a snapshot and serializing it also consume CPU time and memory bandwidth at the source. The copy then reads from source memory, crosses the network and writes to destination memory. The slowest of these steps at its available rate limits the copy, even if the receiving worker has idle CPU. In Megaphone's all-at-once experiment, for example, workers serialized state faster than the network could send it~\cite{nasir2019megaphone}. Moving one batch at a time limited the state waiting to be sent. This is why the estimate must account for how much state is in flight at once, as well as the total bytes moved.
+While writes to the moving keys are fenced, their events must wait. Snapshotting and serialization consume CPU and memory bandwidth at the source. The copy reads from source memory, crosses the network, and writes to destination memory. The available rate of the slowest resource can limit the copy even if the destination has idle CPU. Megaphone shows why granularity matters: batching a planned migration reduced the disruption for several stateful NEXMark queries, with results varying by the amount of state moved~\cite{nasir2019megaphone}.
 
-Compare the total waiting time through the burst and the time it takes the queues to drain. A short burst may end before shorter queues can repay the handoff cost. Even when a move is expected to pay off, the source, destination and link need spare capacity for the first batch. If a required resource is saturated, defer the move before fencing writes or taking a snapshot. Section~\ref{sec:migration-admission} gives the checks for starting, pausing and resuming.
+Before moving write authority, consider redirecting new work, reading an existing valid replica, or deferring the action if those options preserve the service contract. Compare total waiting through the burst and queue drain, including transfer work at the source. A short burst may end before shorter queues can repay the handoff cost. Even when a move is expected to pay off, the source, destination and link need spare capacity for the first batch. If a required resource is saturated, defer the move before fencing writes or taking a snapshot. Section~\ref{sec:migration-admission} gives the checks for starting, pausing and resuming.
 
 \subsubsection{Runtime Control, Recovery, and Stateful Governance}
 
-If moving a set of keys is expected to reduce waiting and the source can sustain the copy, the next question is where processing resumes. The old and new owners must agree on the last event processed for each key before the new owner accepts updates. Checkpoint and replay protocols record the input position from which processing can resume~\cite{carbone2015asynchronous,zhao2024recovery}.
+Before fencing, reserve headroom at the source, destination and shared link, and check the migration budget and recovery epoch (Section~\ref{sec:migration-admission}). Once those conditions hold, the next question is where processing resumes. The old and new owners must agree on the last event processed for each key before the new owner accepts updates. Checkpoint and replay protocols record the input position from which processing can resume~\cite{carbone2015asynchronous,zhao2024recovery}.
 
 Across these systems, the natural abstraction is an ownership-transfer contract: (i) fence or freeze updates, (ii) transfer a consistent shard snapshot plus progress metadata, (iii) hand off authority with idempotent replay boundaries, and (iv) reopen updates under a new owner. Megaphone, Spacker, Flink's asynchronous barriers, and fast-recovery designs each expose part of this contract~\cite{nasir2019megaphone,mao2025spacker,carbone2015asynchronous,zhao2024recovery}. Adjacent transactional and replicated systems make the missing fields clearer: Spanner, Calvin, Raft, and RAMCloud show that a reusable handoff protocol needs current authority, replay boundary, and reclamation condition for the old owner~\cite{corbett2012spanner,thomson2012calvin,ongaro2014raft,ousterhout2011ramcloud}. Most systems still encode these fields implicitly in separate migration and recovery paths.
 
@@ -389,12 +355,13 @@ Comparable governance patterns appear in workflow schedulers, checkpointing syst
 
 \subsubsection{Open Challenges in Access Management}
 
-Despite the progress, the access dimension leaves five recurring control gaps:
+Despite the progress, the access dimension leaves six recurring control gaps:
 \begin{itemize}[leftmargin=*]
 \item \textbf{Conflict observability.} Most systems still rely on coarse metrics and do not expose state conflicts, ownership pressure, and migration debt as first-class runtime objects.
 \item \textbf{Explicit handoff contracts.} Recovery, migration, and rescaling often maintain separate notions of authority, replay boundary, and reclamation condition.
 \item \textbf{Lifecycle-closed serving control.} KV admission, eviction, transfer, and restoration are usually optimized separately even though they share one latency and memory boundary.
 \item \textbf{Semantic shared state.} Intelligent-service runtimes increasingly create vector indexes, retriever memories, prefix-shared KV caches, and workflow context whose conflict patterns are semantic, dynamic, and cross-request.
+\item \textbf{Migration-induced overload.} A copy can consume the headroom needed to serve the burst. Admission requires a conservative demand bound and shared reservations (Section~\ref{sec:migration-admission}).
 \item \textbf{Compositional controllers.} Local access policies rarely compose cleanly with topology changes, disaggregation, colocated training, or memory middleware.
 \end{itemize} These gaps push access modeling beyond local contention management toward ownership and lifecycle contracts over dynamic state objects.
 
@@ -402,15 +369,13 @@ Despite the progress, the access dimension leaves five recurring control gaps:
 
 \subsubsection{Why Faster Kernels Do Not Guarantee Better Services}
 
-Running example B highlights the same point in serving form: a multi-tenant assistant with mixed prompt lengths may have excellent single-kernel speed, yet still miss SLOs once KV residency, prefill/decode phase asymmetry, and adapter multiplexing collide. The runtime wins only when it governs where short-lived state lives and when that state moves. A common limitation is to equate stateful execution with faster kernels or higher operator throughput. Once state interacts with heterogeneous hardware, data movement and coordination often dominate raw compute speed, while latency, energy, and quality objectives can overturn microbenchmark gains.
-
-Integrated CPU-GPU stream systems make this point concrete. Fine-grained window processing on integrated architectures showed that topology and data path design directly alter the feasible performance envelope, while co-running studies on the same class of hardware reached a similar conclusion from the broader angle of shared-resource interference~\cite{zhang2020finestream,zhang2016corun,zhang2016elastic}. These systems emphasize that execution gains emerge only when state organization, data movement, and device mapping are optimized together.
+In Example~B, a faster kernel can leave a request waiting for KV space or for a prefill to finish. FineStream moves window work across a CPU and GPU that share memory, while co-running operators compete for memory bandwidth~\cite{zhang2020finestream,zhang2016corun,zhang2016elastic}. Placement decisions should account for work on the shared data path and service latency.
 
 \subsubsection{Energy, Compression, and Stateful Data Paths}
 
 Offloading a KV page to host memory frees device memory while retaining a copy. On a later access, loading that copy uses link bandwidth. Compressing it can reduce transfer time at the cost of decoding it again.
 
-The CStream line deepens this theme by examining stateful compression on edge and asymmetric multicore devices~\cite{zeng2023cstreamicde,zeng2024cstream}. Compression dictionaries are state: their access pattern, update granularity, and task decomposition shape energy, latency, and compression ratio. The observation generalizes beyond compression. Whenever intermediate state crosses operators or requests, device selection, data movement, and representation choice become one coupled decision rather than independent knobs.
+In CStream, the compression dictionary is itself state. Moving or updating it changes energy, latency, and compression ratio on asymmetric cores~\cite{zeng2023cstreamicde,zeng2024cstream}. The useful comparison holds the input fixed and accounts for both dictionary work and the bytes saved.
 
 \subsubsection{KV-Cache Management as a State-Execution Problem}
 
@@ -422,7 +387,7 @@ PagedAttention allocates KV memory in blocks as requests grow~\cite{kwon2023page
 
 A serving system may instead discard selected tokens from the active attention context. That saves memory during the current request and can change its output. Evaluating this choice requires measuring answer quality as well as the number of sequences that fit.
 
-Approximate execution adds output quality to the control boundary. PECJ~\cite{zeng2024pecj} addresses disorder in stream window joins by compensating for missing or late data using explicit error modeling. LibAMM~\cite{zeng2024libamm} shows that algorithm choice, dataset properties, and memory behavior jointly determine whether approximate matrix multiplication yields a stable efficiency-accuracy trade-off. FreeSAM~\cite{tang2025freesam} and LEAP~\cite{xu2024leap} reach similar conclusions for joins and video databases: approximation works only when quantity, quality, and system cost are modeled together. When intermediate or retained state influences correctness, the runtime needs an \emph{execution boundary}, not a single performance target.
+Quality can also constrain execution in analytics. PECJ models error from late or missing records in a window join, whereas LibAMM trades matrix approximation error for lower computation and memory cost~\cite{zeng2024pecj,zeng2024libamm}. The comparison depends on which output property must hold: recovering a timely window estimate and bounding numerical error require different measurements.
 
 \subsubsection{Toward Closed-Loop Execution Control}
 
@@ -436,9 +401,7 @@ Existing systems provide the ingredients for online execution control: topology-
 
 \subsubsection{From Updates to Long-Horizon Memory}
 
-Running example C makes the evolution problem tangible: a RAG service ingesting daily document churn can keep answering queries, but quality silently drifts unless refresh cadence, shard exposure, and compaction debt are co-managed. ``Update more'' and ``serve faster'' become conflicting objectives unless the runtime prices their future interaction. The third major dimension of \emph{state management} in parallel and distributed systems therefore concerns what happens after execution produces new information. In many older data systems, state updates were treated as maintenance; in dynamic AI services, updates are themselves central because the system must decide what to absorb, what to retain, what to discard, and how to expose retained state for future reuse.
-
-Online adaptation and clustering systems make this shift visible. SentiStream~\cite{wu2023sentistream} frames model update as part of a coupled co-training loop, while MOStream~\cite{wang2024mostream} and empirical stream-clustering studies~\cite{wang2023dscstudy} expose summarization, windowing, refinement, and outlier control as interacting maintenance decisions. Online update is therefore not one mechanism but a coupled control problem.
+In Example~C, a RAG service receives corpus changes while it answers queries. Refreshing more aggressively exposes updates sooner and competes with reads for resources. Online learning has the same timing question at a different boundary: SentiStream updates its models from the stream, and MOStream trades refinement against the work of maintaining summaries~\cite{wu2023sentistream,wang2024mostream,wang2023dscstudy}. Measure the benefit on later queries or predictions, and charge maintenance to the period in which it runs.
 
 \subsubsection{Memory Budgets, Retention, and Sample Selection}
 
@@ -446,11 +409,7 @@ In Example~C, new documents enter an index with a fixed memory budget. Evicting 
 
 \subsubsection{Structured Memory and Dynamic Retrieval}
 
-Retrieval-augmented and knowledge-enhanced systems make reuse explicit by turning external knowledge into a managed runtime substrate. The relevant substrate has four layers: retriever-facing memory, retrieval policy, index structure, and maintenance. FlowRAG shows that reuse quality decays as corpora shift without controlled retriever adaptation~\cite{zhang2026flowrag}; KELDAR and Global Planning show that planner-visible knowledge structures can become runtime-managed memory objects~\cite{li2024keldar,li2025global}.
-
-Recent memory-centric systems begin to make the middleware layer itself explicit. Neuromem decomposes memory into insertion, consolidation, retrieval, and integration stages, making latency cost and accuracy decay visible as lifecycle properties~\cite{zhang2026neuromem}. SAGE points in a workflow-native direction by exposing pluggable vector-index layers, asynchronous update queues, declarative window operators, and dual-stream joins as modular stateful services~\cite{liu2026sage}. Placed alongside FlowRAG and Self-RAG, these lines suggest that long-horizon reasoning will eventually require memory middleware that externalizes both retrieval policy and memory-maintenance policy~\cite{zhang2026flowrag,asai2024selfrag}. The missing layer is a policy kernel that can decide when to consolidate, refresh, defer, or expose memory objects across heterogeneous reasoning workflows.
-
-A retrieval system makes decisions at two different times. Self-RAG decides during generation whether to consult external documents~\cite{asai2024selfrag}. FreshDiskANN updates the search index as vectors arrive or are deleted~\cite{singh2021freshdiskann}. The first decision changes which evidence an answer uses. The second changes which evidence a future query can find. A static retrieval test can measure the first effect while missing the delay between an update and its visibility to queries.
+A retrieval system decides when to consult memory (Self-RAG), how to organize it (FreshDiskANN), when to update what queries can see (FlowRAG), and what is worth consolidating (Neuromem)~\cite{asai2024selfrag,singh2021freshdiskann,zhang2026flowrag,zhang2026neuromem}. These decisions expose different consequences. A retrieval trigger changes which evidence the current answer uses. Index maintenance changes which evidence future queries can reach. Testing a fixed corpus can measure the first effect while missing the delay between an update and its visibility.
 
 \subsubsection{Bridging Evolution with Access and Execution}
 
@@ -459,9 +418,11 @@ In Example~A, moving account state also changes where recovery must resume. Exam
 \subsection{How KV Eviction Affects the Next Request}
 \label{sec:propagation-trace}
 
-Session A has finished its first request. The worker keeps its prefix in the same pool of key--value (KV) pages it uses for active requests. Request B arrives with a long prompt. The worker has time to run it but too few free pages. B can start now if the allocator reclaims A's unpinned pages, or wait until another request releases enough memory. Eviction benefits B by shortening its wait to start prefill.
+Session A has finished its first request, and the worker retains its unpinned KV prefix. Request B arrives with a long prompt and can start only after enough pages become free. The allocator can evict A's prefix or wait. If A returns while its prefix would still have been cached, eviction can force a reload or recomputation~\cite{kwon2023pagedattention,hu2024memserve,liu2025lmcache}.
 
-Now suppose A returns with the same prefix while it would still have been cached under the keep policy. After eviction, the worker must fetch another valid copy or repeat prefill before it can produce A's first token. Compare the time to first token for B and for A's return under the same arrivals. One eviction links the three dimensions: it gives B access to the worker, removes state A could reuse, and can make A wait for extra computation. Even if eviction removes the last cached copy, A's input tokens and the same model give the worker a way to reconstruct the prefix. Would freeing memory have the same consequences if the discarded state could never be recovered?
+For a numerical illustration, assume waiting for pages adds 10~ms to B's time to first token (TTFT). Eviction removes that wait, has negligible direct cost, and causes A's matching return to spend an additional 4~ms on prefill. Hold the other service times fixed and consider at most one return. At return probability \(p\), the expected change in summed TTFT per episode is \(-10+4p\)~ms. If recomputation instead takes 20~ms, the policies tie at \(p=0.5\). These are assumed times for the example, and each request's latency still needs a separate SLO check. Another valid copy changes A's cost to its reload time if that is cheaper.
+
+This example identifies a common mechanism across the three dimensions. Freeing state removes one access constraint, alters execution for a subsequent request, and changes the future value of the cache. Section~\ref{sec:comparative-synthesis} compares when the same reasoning applies to other state, including objects that cannot be reconstructed and moves that must preserve write authority.
 
 \section{Comparative Synthesis Across Domains}
 \label{sec:comparative-synthesis}
@@ -470,11 +431,11 @@ A learner with a full replay buffer faces the same choice as the serving worker:
 
 \subsection{When Can State Be Used, and When Is It Useful?}
 
-Before a system can weigh the benefit of reuse, it must establish which operations are valid. A stream worker may apply a new event to a key only while it holds write authority for that key. A retrieval service can likewise check whether a replica exposes the version a query requires. Both checks have a definite answer for that key or version. Passing the version check says nothing about whether the index will return a relevant document. To estimate that benefit, measure recall on queries drawn from the workload. Ownership and version checks govern individual operations; expected usefulness depends on which queries or updates arrive.
+Before a system can weigh the benefit of reuse, it must establish which operations are valid. A stream worker may apply a new event to a key only while it holds write authority for that key. A retrieval service can likewise check whether a replica exposes the version a query requires. Authority and version checks are deterministic for a given operation and replica. The usefulness of valid state is workload-dependent: an index can expose the correct version and miss a relevant document. Measure expected usefulness with metrics such as recall over a stated query distribution or earlier-task accuracy after a sequence of updates. A runtime that serves approximate results still has to enforce its version and access rules.
 
 \subsection{Cross-Domain Comparative Synthesis}
 
-Table~\ref{tab:comparison-guide} gives the question behind each comparison. The following subsections trace the decision in the cited systems. Table~\ref{tab:representative-mechanism-matrix} collects the consequences for later work.
+Section~\ref{sec:core-dimensions} identifies the mechanisms and traces their immediate effects. Here we use the five questions in Table~\ref{tab:scaffold} to compare their transfer conditions. Each row of Table~\ref{tab:comparison-guide} ties a difference in the workload or state contract to two concrete actions. Table~\ref{tab:representative-mechanism-matrix} then links evidence from the cited work to the next measurement needed for a transfer claim.
 
 \begin{table*}[t]
 \small
@@ -486,36 +447,36 @@ Table~\ref{tab:comparison-guide} gives the question behind each comparison. The 
 \toprule
 Domain & What differs between the cases? & What does the runtime do differently? \\
 \midrule
-Streaming & Is a worker saving a recovery point or handing a key to a new owner? & Save state for later replay, or transfer it before the new owner processes subsequent events. \\
-Analytics & Must the query use all records, or will the user accept an estimate? & Distribute the computation, or choose a sample that meets the time or error budget. \\
-LLM serving & How much of a valid prefix is local, and how long would fetching the rest take? & Choose a worker, then fetch missing blocks or recompute them there. \\
-Vector search & Are recent inserts kept in a temporary graph or written to a partition of the main index? & Merge buffered updates into the disk graph, or split and repair an affected partition. \\
-Continual learning & Must the model adapt as data arrive, or can training wait until evaluation? & Select old examples for the current update, or retain a buffer balanced across classes for later training. \\
+Streaming & Is a worker saving a recovery point or handing a key to a new owner? & Restore from a checkpoint, or move keys at a progress boundary~\cite{carbone2015flink,nasir2019megaphone}. \\
+Analytics & Must the query use all records, or will the user accept an estimate? & Partition exact window processing, or select a sample under a time or error constraint~\cite{zhang2020finestream,agarwal2013blinkdb}. \\
+LLM serving & How much of a valid prefix is local, and how long would fetching the rest take? & Route to a worker, then fetch missing blocks or recompute them~\cite{qin2025mooncake,hu2024memserve}. \\
+Vector search & Are recent inserts kept in a temporary graph or written to a partition of the main index? & Merge the temporary index, or split and repair an affected partition~\cite{singh2021freshdiskann,xu2023spfresh}. \\
+Continual learning & Must the model adapt as data arrive, or can training wait until evaluation? & Select replay examples for this update, or balance the buffer for later training~\cite{aljundi2019mir,prabhu2020gdumb}. \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
 \subsubsection{Streaming and Transactional Dataflow Systems}
 
-Flink and Megaphone both have to tell which records have already contributed to an operator's state. In Flink's checkpoint protocol~\cite{carbone2015flink}, an operator waits for a barrier on each input and saves its state at that boundary. After a failure, it restores the checkpoint and replays the later input. Megaphone~\cite{nasir2019megaphone} faces a different event. The stream is still running, but a group of keys is about to move. Once the old worker has processed the records before the scheduled handoff time, it sends the state for those keys to the new worker, which can then process their later records. Other keys can keep moving through the operator during the handoff.
+Flink and Megaphone both have to tell which records have already contributed to an operator's state. In Flink's checkpoint protocol~\cite{carbone2015flink}, an operator waits for a barrier on each input and saves its state at that boundary. After a failure, it restores the checkpoint and replays the later input. Megaphone~\cite{nasir2019megaphone} faces a different event. The stream is still running, but a group of keys is about to move. Once the old worker has processed the records before the scheduled handoff time, it sends the state for those keys to the new worker, which can then process their later records. Other keys can continue during the handoff. The common requirement is a progress boundary. A live move additionally requires deciding when to spend capacity to switch the owner.
 
 \subsubsection{Hardware-Conscious and Approximation-Aware Stateful Execution}
 
-FineStream~\cite{zhang2020finestream} runs window queries on a chip where the CPU and GPU share memory. To finish a window sooner, it divides the work between the two processors while keeping the same records in the computation. BlinkDB~\cite{agarwal2013blinkdb} serves analytical queries whose users can accept an estimate. Given a time limit or an error bound, it chooses how large a sample to query and reports the estimate with its uncertainty. Moving work to the GPU changes when a window result is ready. Reading a smaller sample can also change the value returned to the user.
+FineStream~\cite{zhang2020finestream} runs window queries on a chip where the CPU and GPU share memory. To finish a window sooner, it divides the work between the two processors while keeping the same records in the computation. BlinkDB~\cite{agarwal2013blinkdb} serves analytical queries whose users can accept an estimate. Given a time limit or an error bound, it chooses how large a sample to query and reports the estimate with its uncertainty. Moving work to the GPU changes when a window result is ready. A smaller sample can also change the reported value. A latency result transfers to approximate execution only when evaluated against the output-quality requirement.
 
 \subsubsection{LLM Serving and Short-Lived Memory Lifecycles}\label{sec:serving-comparison}
 
-Suppose the worker with the longest matching prefix also has the longest queue. Mooncake~\cite{qin2025mooncake} can send the request to another worker if it expects that worker to produce the first token sooner. Its choice accounts for the queue, the prefix available there, and the cost of fetching blocks. MemServe~\cite{hu2024memserve} also considers queues and cache hits when routing. Once it has picked a worker, it makes a further choice. If another worker holds more of the prefix, MemServe fetches the extra blocks when their estimated transfer time is no greater than the prefill time they would save. Otherwise it recomputes that part locally.
+Suppose the worker with the longest matching prefix also has the longest queue. Mooncake~\cite{qin2025mooncake} can route to another worker if its queue, local cache and fetch cost imply an earlier first token. MemServe~\cite{hu2024memserve} also considers queues and cache hits. After routing, its cost-based policy fetches additional blocks when the estimated transfer takes no longer than the prefill it would save. The estimate uses the maximum transfer bandwidth, and its evaluation used eight GPUs in one server. Under inter-server contention, the decision depends on the bandwidth available during the copy.
 
-LMCache~\cite{liu2025lmcache} gives a scheduler operations to look up cached blocks, pin them against eviction, and move them between locations. The distinction from a stream handoff matters here. A second worker can read a copy of a completed prefix. The original worker can keep its copy. If the service switches adapters, it must check whether the cached blocks match the prefix state required by the current model and adapter. A live request poses a further constraint. Llumnix moves the request and its evolving state while decoding is in progress~\cite{sun2024llumnix}. The destination must receive the KV entries produced during the move before it can continue that request.
+LMCache~\cite{liu2025lmcache} gives a scheduler operations to look up cached blocks, pin them against eviction, and move them between locations. The distinction from a stream handoff matters here. A second worker can read a copy of a completed prefix. The original worker can keep its copy. If the service switches adapters, it must check whether the cached blocks match the prefix state required by the current model and adapter. A live request poses a further constraint. Llumnix moves the request and its evolving state while decoding is in progress~\cite{sun2024llumnix}. The destination must receive the KV entries produced during the move before it can continue that request. MemServe's elastic pool and global cache-aware scheduler, and LMCache's engine connector and cache-control operations, make cross-worker reuse actionable. Their interfaces move the open question to how a scheduler should jointly reserve transfer capacity and account for tail latency when reload, recomputation, and foreground work compete.
 
 \subsubsection{Retrieval Memory and Vector-Index State Layers}
 
-FreshDiskANN~\cite{singh2021freshdiskann} keeps its main search graph on SSD. It puts new vectors in an in-memory index and searches both indexes, filtering deleted entries from the results. Queries can find an insertion before the next merge. When the temporary indexes reach a memory threshold, a background merge incorporates the updates into the disk graph. SPFresh~\cite{xu2023spfresh} partitions the vectors by proximity. It inserts a new vector into the nearest partition. If the partition grows too large, it splits it and reassigns affected vectors near the new boundary. Thus a burst of insertions leaves different work behind: a merge with the disk graph in FreshDiskANN, or repairs to the affected partitions in SPFresh. Query latency and recall during that work tell us what users experience.
+FreshDiskANN~\cite{singh2021freshdiskann} keeps its main search graph on SSD. It puts new vectors in an in-memory index and searches both indexes, filtering deleted entries from the results. Queries can find an insertion before the next merge. When the temporary indexes reach a memory threshold, a background merge incorporates the updates into the disk graph. SPFresh~\cite{xu2023spfresh} partitions the vectors by proximity. It inserts a new vector into the nearest partition. If the partition grows too large, it splits it and reassigns affected vectors near the new boundary. Thus a burst of insertions leaves different work behind: a merge with the disk graph in FreshDiskANN, or repairs to the affected partitions in SPFresh. To transfer a result across the two policies, align the visibility of new versions and measure recall and latency during repair.
 
 \subsubsection{Continual Learning and Retention Governance}
 
-MIR~\cite{aljundi2019mir} updates the model as new batches arrive. It estimates how a step on the new batch would change the loss on stored examples. It replays the examples with the largest predicted increases alongside the new batch. GDumb~\cite{prabhu2020gdumb} can defer training until evaluation. As examples arrive, it keeps a buffer whose class counts it tries to balance. At evaluation it trains a fresh model using only that buffer. For MIR, the immediate question is which old example to replay in this update. For GDumb, dropping the last example of a class leaves the next training run with no example of that class unless another arrives.
+MIR~\cite{aljundi2019mir} updates the model as new batches arrive. It estimates how a step on the new batch would change the loss on stored examples. It replays the examples with the largest predicted increases alongside the new batch. GDumb~\cite{prabhu2020gdumb} can defer training until evaluation. As examples arrive, it keeps a buffer whose class counts it tries to balance. At evaluation it trains a fresh model using only that buffer. For MIR, the immediate question is which old example to replay in this update. In GDumb, losing the last example of a class can remove it from the next training run. The benefit of retention must therefore be measured on future tasks as well as the current update.
 
 \subsubsection{Comparing the Effects of State Decisions}
 
@@ -529,16 +490,16 @@ Table~\ref{tab:representative-mechanism-matrix} gives two reasons to split work 
 \label{tab:representative-mechanism-matrix}
 \begin{tabular}{@{}p{0.15\textwidth}p{0.40\textwidth}p{0.39\textwidth}@{}}
 \toprule
-Decision & What the cited work does & Consequence to examine \\
+Decision & Evidence from the cited work & Open test and its reason \\
 \midrule
 Stream progress & MillWheel records keyed state and processing progress so computation can resume after failure~\cite{akidau2013millwheel}. & Moving a key also requires agreement on which worker applies subsequent events. \\
-Shard migration & In Megaphone, serialization can outpace the link. Staging transfers limits the state waiting to be sent~\cite{nasir2019megaphone}. & Even the first batch consumes CPU and memory bandwidth on the source. \\
+Shard migration & Megaphone's batched strategy lowered the latency spike for stateful NEXMark Q4 relative to its all-at-once strategy~\cite[Figure~8]{nasir2019megaphone}. & Measure foreground queue growth with simultaneous bursts because smaller batches still consume source and link resources. \\
 Device placement & FineStream divides window processing between a CPU and GPU sharing memory~\cite{zhang2020finestream}. & On discrete devices, include the cost of moving intermediate results across the link. \\
 Approximate queries & BlinkDB selects a sample under a response-time or error constraint and reports the uncertainty~\cite{agarwal2013blinkdb}. & If the estimate triggers an alert, its uncertainty matters most near the alert threshold. \\
 Serving capacity & PagedAttention allocates KV blocks on demand. Sarathi-Serve interleaves chunks of prefill with decoding~\cite{kwon2023pagedattention,agrawal2024sarathi}. & Paging changes how many requests fit. Chunking changes how long a decoding request waits for its next token. \\
-Prefix transfer & Mooncake accounts for queues and cache hits. MemServe compares transfer with recomputation. LMCache supplies block lookup and movement~\cite{qin2025mooncake,hu2024memserve,liu2025lmcache}. & Measure time to first token on a return visit, including the time to reload or recompute the prefix. \\
+Prefix transfer & Mooncake accounts for queues and cache hits. MemServe compares transfer with recomputation. LMCache supplies block lookup and movement~\cite{qin2025mooncake,hu2024memserve,liu2025lmcache}. & Measure return-visit TTFT under shared-link pressure because even a cache hit can incur transfer and queue delay. \\
 Adapter residency & S-LoRA manages adapter weights and KV tensors in one memory pool~\cite{sheng2023slora}. & After switching adapters, check that existing KV blocks still match the parameters used for this request. \\
-Index maintenance & FreshDiskANN merges recent updates into a disk graph. SPFresh repairs affected partitions in place~\cite{singh2021freshdiskann,xu2023spfresh}. & Compare recall and query latency while background maintenance is running. \\
+Index maintenance & FreshDiskANN merges recent updates into a disk graph. SPFresh repairs affected partitions in place~\cite{singh2021freshdiskann,xu2023spfresh}. & Compare recall and query latency under published-version lag because merge and repair leave different background work. \\
 On-demand retrieval & Self-RAG decides during generation whether to look up documents~\cite{asai2024selfrag}. & The documents it can find also depend on which corpus updates are visible to the index. \\
 Retained examples & MIR replays examples at risk in the next update. GDumb trains at evaluation on a class-balanced buffer~\cite{aljundi2019mir,prabhu2020gdumb}. & Evicting an example removes a replay candidate in MIR and a training example in GDumb. \\
 \bottomrule
@@ -547,7 +508,7 @@ Retained examples & MIR replays examples at risk in the next update. GDumb train
 
 \subsection{What the Measurements Establish}
 
-Megaphone measured a queue of serialized state at the sender when migration outpaced network transmission~\cite{nasir2019megaphone}. Limiting a batch can bound that queue even while the queue of incoming events continues to grow. To judge whether migration relieves a hotspot, track both queues and the rate at which live events complete after the burst. This distinction leads to the admission rule in Section~\ref{sec:migration-admission}: the ability to send a batch is only one of the conditions for starting it.
+Megaphone shows that migration granularity can reduce latency spikes under a planned reconfiguration~\cite{nasir2019megaphone}. For a reactive move, the receiver and network must have capacity when the source detects the burst. To evaluate that decision, track both the migration backlog and the foreground queue through recovery. Across the comparison table, smaller units bound the scope of a single action. Its effect on ownership, reuse and recovery determines which measurements establish a service improvement.
 
 \section{Design Implications for Stateful Runtimes}
 \label{sec:design-implications}
@@ -586,34 +547,80 @@ Anti-pattern & Missing contract & Primary blueprint layer & Expected design effe
 \midrule
 Telemetry-action mismatch & signals must name a legal actuation target and its delay or confidence semantics & observation and disturbance detection & dashboards become control inputs rather than passive monitoring \\
 
-Conflicting policies & define which action takes precedence & decision and admission rules & compare starts, pauses and restarts with queue growth and recovery after a burst \\
+Conflicting policies & Define which action takes precedence & Decision and admission & Preserve foreground capacity when actions compete. \\
 
 One-shot benchmarking of non-stationary mechanisms & disturbance phases and re-stabilization windows must be part of the contract & observation plus safety and recovery envelope & reported gains remain meaningful outside stationary replay \\
 
 Ignoring Write Amplification in Read-Optimized Designs & mutation, compaction, deletion repair, and maintenance debt must be charged to the same boundary as read gains & state catalog plus actuation interfaces & deferred rebuild or compaction cost becomes visible during design review \\
+
+Copying at saturation & Charge copy work against the foreground bottleneck & Decision and admission & Defer before fencing if resource headroom is unavailable. \\
+
+Concurrent migration to a shared bottleneck & Reserve shared links and destination capacity together & Actuation and coordination & Serialize conflicting moves and back off before retrying. \\
 
 Treating State Ownership as Static & ownership transfer and no-eviction rules must survive migration, recovery, and restoration & actuation interfaces plus safety and recovery envelope & scale-out and fault handling share one transferable state model \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{A Contract-Oriented Blueprint for Stateful Runtimes}\label{sec:migration-admission}
+\subsection{A Contract-Oriented Blueprint for Stateful Runtimes}
 
 The literature supports a compact contract view with five layers: typed state catalog, observation and disturbance detection, boundary model and decision kernel, actuation interfaces, and safety and recovery envelope. Systems that made these layers explicit made state more governable; systems that left them implicit moved debt into disturbance handling, recovery, or later reuse.
 
-Stronger systems approximate a typed state catalog containing object name, granularity, mutability class, lifecycle stage, and quality sensitivity. Reliable migration, paging, refresh, or replay requires these fields to be explicit enough for multiple controllers to reason about the same object. The observation layer then combines steady metrics with disturbance indicators such as hotspot flips, phase imbalance, retrieval drift, and fragmentation spikes, so the runtime can distinguish ordinary load variation from a change that threatens the service boundary.
 
-For hot-key migration we propose two checks before fencing writes. First, fresh measurements must show room for another batch on the source, destination and link. Second, neither worker's foreground queue may already be growing across successive samples, and downstream backpressure must be below the stop threshold. Start one small batch when both checks pass and its estimated write pause is within the service limit. If the checks fail because incoming work exceeds capacity, defer the move and throttle admissions or add capacity. As new samples arrive, stop issuing batches if a queue keeps growing or backpressure reaches the stop threshold. Slow interruptible transfers and preserve reservations for committed handoffs. Resume at a low rate only after queues have stopped growing and backpressure has stayed below a lower restart threshold for a recovery interval.
+The catalog describes each object's identity, granularity, mutability, and lifecycle. Observation supplies fresh resource pressure and foreground queue trends to a saturation guard. The decision layer reserves a migration budget and defines when copy rate must fall as pressure rises. The actuation interface scopes coordination through reservations, leases, and ownership epochs. The recovery envelope defines the rollback scope and preserves authority and replay progress when a move aborts. Section~\ref{sec:migration-admission} specifies these checks for reactive migration.
 
-For each resource \(r\), express all demands as rates over the same control interval. Let \(L_r^{\max}\) bound live traffic, \(M_{r,c}^{\max}\) bound previously committed transfers, \(M_{r,n}^{\max}\) bound the proposed batch, and \(H_r\) be a safety margin. Admit the batch only when
+\subsection{Saturation-Aware Migration}\label{sec:migration-admission}
+
+\paragraph{How a move can amplify a burst.}
+Fencing, snapshotting, copying, and replay can compete with foreground requests for CPU, memory bandwidth, storage I/O, and shared links. Near capacity, a small reduction in effective service rate can cause a much larger increase in waiting time. If a controller treats this queue growth as fresh evidence of skew, it may start more copies. Several independent controllers can then overload the same destination or network path. This is a possible source of the sustaining feedback described in studies of metastable failure~\cite{bronson2021metastable}. Megaphone illustrates how staging changes migration granularity~\cite{nasir2019megaphone}. Live VM migration motivates bounded pre-copy and explicit accounting for update churn~\cite{clark2005livemigration}. The admission check below addresses the foreground capacity needed for either kind of move.
+
+\paragraph{Estimate the whole move.}
+For candidate move \(x\), estimate \(T_{\mathrm{mig}}=T_{\mathrm{setup}}+B/b_{\mathrm{eff}}+T_{\mathrm{fence}}\) for non-overlapping phases. Here \(B\) includes copy and catch-up bytes and \(b_{\mathrm{eff}}\) is the effective rate under foreground load. If phases overlap, estimate their critical path and count each interval once. Keep a resource-demand vector for fencing, scanning, serialization, transfer, replay and cleanup at both endpoints and along shared links. A delay objective can express \(C(x)\) in request-seconds: sum extra waiting across affected requests before the new placement settles, including fence delays and any expected rollback delay. Report rejected work and correctness constraints separately. A bound on transient utilization must charge this work where it occurs, including the source.
+
+Let \(\lambda_i,\lambda'_i\) denote the foreground rates of each class at endpoint \(i\) under the original and proposed placement, and \(W_i,W'_i\) its mean wait in seconds. Sum across all affected classes and endpoints. The waiting saved per second after settlement is
 \[
-  L_r^{\max}+M_{r,c}^{\max}+M_{r,n}^{\max}+H_r \leq C_r^{\min}
+  D(x)=\sum_i \bigl(\lambda_i W_i-\lambda'_i W'_i\bigr).
 \]
-holds for every required resource, where \(C_r^{\min}\) is a lower bound on usable capacity. Apply the inequality to CPU and memory bandwidth at both workers and to bandwidth on the network path. Bound the write pause separately. Controllers sharing a bottleneck must commit their reservations against the same budget before fencing writes. If the stated bounds hold and the reservations are enforced, a new batch cannot consume the capacity reserved for foreground work. The write fence can still delay events for the moving keys. A historical average cannot bound a new burst. If no conservative bound is available, defer the batch. Track useful throughput, retries and queues after arrivals subside to detect overload that persists beyond the original burst.
+For an estimated remaining skew horizon \(H\) after detection, let \(T_{\mathrm{settle}}\) be the time to drain the migration transient. Require \(H>T_{\mathrm{mig}}+T_{\mathrm{settle}}\) and a conservative estimate of
+\[
+  G(x)=(H-T_{\mathrm{mig}}-T_{\mathrm{settle}})D(x)-C(x)>0.
+\]
+The horizon test excludes short bursts and the benefit test includes the wait added at the destination. Both estimates depend on the workload. Reject a move whose projected post-handoff service would violate either endpoint's limits. Compare with deferral, redirecting new work, or reading a valid replica where semantics permit.
 
-An embedded scheduler can check the budget when it issues the transfer. A sidecar observing an older queue sample must include work that could have arrived since that sample and obtain a reservation from the worker before starting the copy.
+\paragraph{Reserve capacity and limit feedback.}
+For every required resource \(r\), reserve rates over the same control interval. Let \(L_r^{\max}\) bound foreground demand, \(M_{r,c}^{\max}\) bound existing reservations, \(M_{r,n}^{\max}\) bound this batch, and \(H_r\) be a margin for uncertainty. Admit a batch only if
+\[
+  L_r^{\max}+M_{r,c}^{\max}+M_{r,n}^{\max}+H_r\le C_r^{\min},
+\]
+where \(C_r^{\min}\) is a lower bound on usable capacity. Include the age of the telemetry, time to acquire a reservation, and the largest non-interruptible phase. With valid bounds and enforced reservations, a batch preserves the reserved foreground capacity. The write fence can still delay events for the moving keys, so enforce a separate pause bound. If fresh conservative bounds are unavailable, defer before fencing. For a batch in flight, throttle interruptible work as foreground pressure rises and stop admitting new batches at the pressure limit. Preserve enough reserved capacity to finish or safely abort a committed handoff. Resume at a low rate after queues stop growing and pressure stays below a lower restart threshold for a recovery interval. This hysteresis prevents a brief dip in pressure from immediately restarting a copy.
 
-The blueprint also helps separate mechanism novelty from integration maturity. A new eviction policy, approximation rule, or retrieval trigger may be technically clever, but it remains a local policy until the system states how it composes with neighboring controllers. Integration maturity increases when the mechanism has a typed state object, a measurable trigger, a bounded action surface, an explicit precedence relation, and a recovery or safety condition. This is why the survey repeatedly emphasizes contracts over algorithms. Algorithms decide what to do under a local objective; contracts decide when an action is legal, which boundary absorbs its cost, and how later controllers observe the debt it created.
+\begin{table}[t]
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Contract fields checked when a runtime considers moving mutable state.}
+\label{tab:migration-contract}
+\begin{tabular}{@{}p{0.25\textwidth}p{0.38\textwidth}p{0.31\textwidth}@{}}
+\toprule
+Field & What it protects & Response when the check fails \\
+\midrule
+Saturation guard & Foreground capacity at both workers and along the shared path & Defer before taking a snapshot or fencing. \\
+Migration budget & Per-resource rates and the cluster-wide in-flight limit & Reject or queue the reservation. \\
+Negative-feedback boundary & Foreground queue growth and backpressure during a copy & Reduce interruptible copy rate, stop new batches, and apply restart hysteresis. \\
+Rollback scope & Single write authority and the progress boundary for replay & Release a pre-commit fence at the old owner, or recover at the committed epoch. \\
+Coordination scope & Shared reservations and exclusive destination leases for conflicting moves & Serialize conflicts and retry after randomized backoff. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Coordinate across workers.}
+Use shared per-resource token buckets and destination leases acquired before fencing. A lease carries an epoch so a delayed controller cannot authorize a second owner. Record completed directions for each object to detect reversals. A possible additional rule is to require a drop of at least \(\epsilon>0\) in a cluster score \(\Phi=\sum_i[(u_i-u_*)^2+\gamma(q_i/q_*)^2]\) after settlement. Here \(u_i\) is normalized bottleneck utilization, \(u_*\) a target, \(q_i\) foreground backlog, \(q_*>0\) a reference backlog, and \(\gamma\geq0\) a workload-specific weight. Compare settled windows under the same demand and account for all shared bottlenecks in the resource guard.
+
+\emph{Conditional bound.} Consider successive settled configurations under fixed external demand and capacity. If each accepted move or coordinated group reduces the same lower-bounded score by at least \(\epsilon\), there can be at most \(\lfloor(\Phi_0-\inf\Phi)/\epsilon\rfloor\) such steps. This follows by summing the decreases. Concurrent moves must satisfy the decrease jointly. A workload or capacity change can reset the comparison, and control-plane retries are outside the bound. The result limits repeated accepted moves within the stated regime. It does not bound transient queueing or prove recovery from an overloaded regime.
+
+\paragraph{Worked example and evaluation.}
+Use two illustrative \(M/M/1\) queues with independent Poisson arrivals and exponential service, each serving 100 requests/s in the absence of copy work. The mean queue wait is \(W_q=\rho/[\mu(1-\rho)]\), the single-server expression consistent with Kingman's approximation in this setting~\cite{kingman1961single}. At 90 and 40 requests/s, waits are 90.0 and 6.7~ms. Moving 9 requests/s of independently assignable state gives 81 and 49 requests/s and waits of 42.6 and 9.6~ms, saving about 4.44 request-seconds per second across the two queues. If copying instead temporarily reduces source capacity to 95 requests/s while arrivals remain at 90 requests/s, the corresponding steady-regime wait is 189.5~ms. This last figure illustrates sensitivity and is not the transient latency of a finite copy. For assumed \(B=100\)~MB, \(b_{\mathrm{eff}}=50\)~MB/s, and 0.1~s combined setup and fence, the critical path is 2.1~s before settlement. A burst with only 2~s remaining fails the horizon test even before accounting for fence delays.
+
+Section~\ref{sec:disturbance-evaluation} specifies workload-matched comparisons against fixed placement and eager migration. In the same replay, add guards, shared budgets, and short-burst deferral in stages. Test whether eager migration raises peak foreground backlog near saturation, whether coordinated budgets reduce peak amplification, and whether deferral reduces queue area when the burst ends before a move can settle. Report pauses, handoff failures, retries, and SLO violations alongside those metrics.
 
 \subsection{Cross-Domain Case Studies}
 
@@ -624,7 +631,7 @@ In the serving case, follow both the request admitted after reclamation and the 
 
 The remaining question is evidentiary: how should the field recognize progress once state-management mechanisms interact across layers and over time? We use a disturbance-oriented vocabulary for judging stability, composability, and long-horizon reuse quality, because stationary runs rarely expose the debt created by access reshaping, memory reclamation, delayed publication, or retention under shrinking budgets.
 
-\subsection{Evaluation Dimensions for Future Surveys and Systems}
+\subsection{Evaluation Dimensions for Future Surveys and Systems}\label{sec:disturbance-evaluation}
 
 An enduring weakness is evaluation fragmentation. Access papers often report throughput or contention, execution papers report speedup or energy, and evolution papers report quality or forgetting; each often leaves one adjacent boundary weakly audited, so local gains look stronger than they remain under disturbance or lifecycle debt. Four dimensions should be tracked:
 \begin{itemize}[leftmargin=*]
@@ -635,7 +642,7 @@ An enduring weakness is evaluation fragmentation. Access papers often report thr
 \end{itemize}
 Systems that score well on only one dimension deliver local improvements rather than full state-management solutions.
 
-These dimensions form an evidence ladder. A strong paper makes its state object and control boundary explicit, demonstrates local gains, shows that they survive disturbance, and tests whether they remain meaningful when composed with neighboring controllers or maintenance tasks. The benchmark unit should shift from one-shot runs to multi-phase disturbance traces: warmup, burst, reconfiguration, drift, and long-horizon maintenance belong in one connected experiment.
+Read Table~\ref{tab:disturbance-evaluation-matrix} by row: use the same workload in each comparison and measure both the disturbance and recovery. The table specifies tests for exposed costs and service effects. These dimensions form an evidence ladder. A strong paper makes its state object and control boundary explicit, demonstrates local gains, shows that they survive disturbance, and tests whether they remain meaningful when composed with neighboring controllers or maintenance tasks. The benchmark unit should shift from one-shot runs to multi-phase disturbance traces: warmup, burst, reconfiguration, drift, and long-horizon maintenance belong in one connected experiment.
 
 \begin{table}[t]
 \small
@@ -647,7 +654,7 @@ These dimensions form an evidence ladder. A strong paper makes its state object 
 \toprule
 Scenario & Workload and comparison & What to measure \\
 \midrule
-Hot-key migration & Replay one burst of independent hot keys under fixed placement, immediate migration, and headroom-limited batches. & Source and destination queues, tail latency, useful throughput, admissions and rejections, bytes moved, stop/restart times and time to drain. \\
+Hot-key migration & Replay one burst of independent hot keys under fixed placement, immediate migration, and headroom-limited batches. & Peak source-queue amplification relative to fixed placement, SLO violation rate, useful throughput, migration bytes per arrival, reversals, and recovery time. \\
 KV reclamation & Fill the cache, then issue requests that revisit the evicted prefixes. Compare against a run with the same arrivals and a retained prefix. & Pages freed during the burst, later reload or prefill time, and time to first token. \\
 Index maintenance & Replay the same queries and updates while varying when repair runs and when a version becomes visible. & Recall, query latency, time until a deletion is visible, and pending updates. \\
 Sample retention & Shrink memory at the same update in identical task streams. & Actual memory use, examples removed or compressed, and accuracy on earlier tasks after later updates. \\
@@ -656,13 +663,13 @@ Shared middleware & Run the same serving, retrieval and update workloads separat
 \end{tabular}
 \end{table}
 
-The migration and cache tests extend the two observations above: a transfer uses sender resources while live events are arriving~\cite{nasir2019megaphone}, and a remote cache hit still takes time to fetch~\cite{hu2024memserve}. For the migration test in Table~\ref{tab:disturbance-evaluation-matrix}, use the same initial queues, destination capacity, candidate keys, and foreground admission policy. Return the input rate to its pre-burst level and continue measuring until the queues recover or a stated observation limit is reached. Report accepted, deferred and rejected events separately. Otherwise a queue that shrinks because requests were dropped can resemble one that drains because service improved.
+The migration and cache tests extend the two observations above: a transfer uses sender resources while live events are arriving~\cite{nasir2019megaphone}, and a remote cache hit still takes time to fetch~\cite{hu2024memserve}. For the migration test in Table~\ref{tab:disturbance-evaluation-matrix}, use the same initial queues, destination capacity, candidate keys, and foreground admission policy. Return the input rate to its pre-burst level and continue measuring until the queues recover or a stated observation limit is reached. Report accepted, deferred and rejected events separately. Compute amplification from peak queues over the same interval and report the absolute peak difference if the fixed-placement peak is zero. Count ownership reversals separately from pauses and retries. Otherwise a queue that shrinks because requests were dropped can resemble one that drains because service improved.
 
 \subsection{Boundary Conditions and Threats to Transfer}
 
 The comparison above is deliberately mechanism-centered, but the mechanisms do not transfer automatically. A scheduler that works for keyed stream partitions may fail for KV-cache pages because the ownership interval is shorter, the reuse value is more speculative, and the protected boundary is tail latency rather than exactly-once progress. Conversely, a serving allocator that reacts well to phase imbalance may offer little guidance for retrieval maintenance, where the costly action is not immediate eviction but publication, repair, or rebuild under freshness constraints. The transferable unit is therefore not the policy itself, but the contract it implies: which object is governed, which actions are legal, which service boundary absorbs the cost, and which future debt is recorded.
 
-Three threats are especially easy to miss when reading across domains. First, state identity is often less stable than the paper's terminology suggests. A stream shard, a KV page, an ANN segment, and an exemplar buffer can all be called ``state,'' but their mutability, ownership, and invalidation semantics differ sharply. Second, disturbance horizons differ. Stream recovery may unfold over seconds, serving reclamation over milliseconds, retriever rebuilds over minutes or hours, and continual-retention effects over many update rounds; an evaluation that is long enough for one domain can still be too short for another. Third, quality boundaries are not interchangeable. Bounded approximation error, answer freshness, p99 latency, and forgetting are all service properties, but they tolerate different kinds of temporary debt. These differences explain why the survey emphasizes tuples and contracts rather than mechanism names.
+Three threats are especially easy to miss when reading across domains. First, state identity is often less stable than the paper's terminology suggests. A stream shard, a KV page, an ANN segment, and an exemplar buffer can all be called ``state,'' but their mutability, ownership, and invalidation semantics differ sharply. Second, disturbance horizons differ. Stream recovery may unfold over seconds, serving reclamation over milliseconds, retriever rebuilds over minutes or hours, and continual-retention effects over many update rounds; an evaluation that is long enough for one domain can still be too short for another. Third, quality boundaries are not interchangeable. Bounded approximation error, answer freshness, p99 latency, and forgetting are all service properties, but they tolerate different kinds of temporary debt. The state object, its contract, and the observation horizon define the conditions under which a comparison transfers.
 
 A stream processor must prevent an event from updating both copies of a migrating key. An inference service may read multiple copies of the same prefix, provided each matches the input, model and adapter. In the former case, test recovery on either side of the ownership change. In the latter, test whether the right prefix remains available when a user returns.
 
@@ -670,9 +677,9 @@ For future systems papers, the practical implication is to state the transfer cl
 
 \subsection{An Integrated Research Agenda}
 
-\emph{Observation.} A worker can report spare capacity and exhaust it before a migration starts. The open question is how to bound foreground demand over the age of a sample plus the time needed to obtain a reservation. Shortening that interval can admit more moves but costs additional coordination.
+\emph{Observation.} A worker can report spare capacity and exhaust it before a migration starts. The open question is how to bound foreground demand over the age of a sample plus the time needed to obtain a reservation. Shortening that interval can admit more moves but costs additional coordination. A useful comparison would measure both the foreground breaches and the viable moves lost when telemetry ages, alongside the cost of refreshing it.
 
-\emph{Placement.} A GPU can finish an operator sooner and still deliver its result later if other transfers occupy the link. A placement rule therefore needs an estimate of bandwidth available during the proposed transfer. Measuring the idle link before several workers make concurrent placement decisions can lead each worker to count the same capacity.
+\emph{Placement.} A GPU can finish an operator sooner and still deliver its result later if other transfers occupy the link. A placement rule therefore needs an estimate of bandwidth available during the proposed transfer. Measuring the idle link before several workers make concurrent placement decisions can lead each worker to count the same capacity. Cache interfaces expose data movement, but admission across independently scheduled tenants still requires a consistent view of reservations and the option to recompute or defer.
 
 \emph{Retention.} Evicting a prefix frees a known number of pages. The cost depends on when the user returns and whether another copy still exists then. A policy trained only on cache hits misses the prefixes users requested after eviction. Recording those misses and their reload or recomputation times would let us test which prefixes were worth keeping.
 
@@ -681,7 +688,7 @@ For future systems papers, the practical implication is to state the transfer cl
 \section{Conclusion}
 \label{sec:conclusion}
 
-Efficient state management is best understood as one coupled control loop over access, execution, and evolution. Comparing streaming, serving, retrieval, and retention through the same five-field tuple shows that the recurring bottleneck is not the absence of clever local mechanisms, but the absence of contracts that keep those mechanisms compatible once state is shared across time, hardware, and service phases. Effective systems name the state object, bind local actions to a measurable service boundary, and charge deferred debt to the same boundary that received the immediate gain. Progress will therefore depend on runtimes that keep state identity, observability, and policy precedence stable under disturbance.
+Efficient state management is best understood as one coupled control loop over access, execution, and evolution. Comparing streaming, serving, retrieval, and retention through the same five questions shows that the recurring bottleneck is not the absence of clever local mechanisms, but the absence of contracts that keep those mechanisms compatible once state is shared across time, hardware, and service phases. Effective systems name the state object, bind local actions to a measurable service boundary, and charge deferred debt to the same boundary that received the immediate gain. Progress will therefore depend on runtimes that keep state identity, observability, and policy precedence stable under disturbance.
 
 \clearpage
 
