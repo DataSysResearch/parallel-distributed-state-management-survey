@@ -17,7 +17,7 @@ A leaves a valid, unpinned KV prefix. When B needs pages, reclaim the prefix or 
 Record pages freed and B's first-token delay. Record A's first-token delay and whether its prefix was loaded or rebuilt. \\
 Shard handoff &
 Move independently assignable keys. Inject failure after copying but before the ownership commit, then repeat just after the commit~\cite{carbone2015flink,nasir2019megaphone,mao2025spacker}. &
-Check the authoritative epoch and last committed input position. Track duplicate or missed updates, write pause, both workers' queues, and recovery time. \\
+Check the authoritative epoch and last committed input position. Track duplicate or missed updates, write pause, peak and end-of-burst backlog, and recovery time. \\
 Index update &
 Delete a document while queries arrive. Compare repair schedules under the same update trace and enforce each query's minimum visible version~\cite{singh2021freshdiskann,xu2023spfresh,wang2026candor}. &
 Track visibility lag, recall, and latency during maintenance. Report how often a query waits or is redirected because its local replica has an older version. \\
