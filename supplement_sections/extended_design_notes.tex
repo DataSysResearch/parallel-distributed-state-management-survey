@@ -78,4 +78,4 @@ The third is \emph{resilience and repair debt}. Save, ChecknRun, CXL memory-prot
 
 Dynamic input pruning with cache-aware masking, near-core decompression, and CXL-centered inference expose different actuators, yet each still ties placement and movement to an explicit runtime choice over state: what may be skipped, decompressed, kept near compute, or shifted into the memory hierarchy~\cite{federici2025dip,gerogiannis2025deca,gu2025cent}. Placement, movement, and state transformation therefore remain one coupled control problem even when the local actuator changes.
 
-Grouped this way, the hardware cluster reads less like a long annex and more like a precise extension of the main claim. The exact mechanisms differ, but the comparative result is stable: once state crosses a hardware boundary, representation, movement, and resilience have to be priced together or the local optimization stops being trustworthy.
+Once state crosses a hardware boundary, representation, movement, and recovery costs jointly determine whether a local optimization improves service. The relative cost of each depends on the data path and the failure conditions the system must handle.
